@@ -13,17 +13,22 @@ class play:
         end = m[2] + m[3]
         self.new.move(start, end)
         return True
+    
+    def print_board(self, side: bool = True):
+        self.new.print_board(side)
 
 
 def main():
     g1 = play()
     while True:
+        g1.new.legal('d4')
         m = input("move: ")
+        if m == "end": exit()
         if not (g1.move(m)):
-            g1.new.print_board()
+            g1.print_board()
             print("ilegal move")
         else:
-            g1.new.print_board()
+            g1.print_board()
 
 
 if __name__ == "__main__":
