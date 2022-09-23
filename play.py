@@ -21,7 +21,7 @@ class play:
 def main():
     g1 = play()
     while True:
-        g1.new.legal('d4')
+        g1.new.legal('h4')
         m = input("move: ")
         if m == "end": exit()
         if not (g1.move(m)):
