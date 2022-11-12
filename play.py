@@ -11,8 +11,7 @@ class play:
             return False
         start = m[0] + m[1]
         end = m[2] + m[3]
-        self.new.move(start, end)
-        return True
+        return self.new.move(start, end)
     
     def print_board(self, side: bool = True):
         self.new.print_board(side)
@@ -21,7 +20,10 @@ class play:
 def main():
     g1 = play()
     while True:
-        g1.new.legal('h4')
+        print(g1.new.locateKing(True))
+        print(g1.new.danger(True))
+        print(g1.new.inCheck(True))
+        print(g1.new.isMate(True))
         m = input("move: ")
         if m == "end": exit()
         if not (g1.move(m)):

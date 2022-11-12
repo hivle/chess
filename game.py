@@ -1,3 +1,9 @@
+from copy import deepcopy
+
+def char_range(c1, c2):
+    for c in range(ord(c1), ord(c2)+1):
+        yield chr(c)
+
 # Lowercase for Black pieces, uppercase for White, 'N' is for knight
 class board:
     def __init__(self):
@@ -16,6 +22,7 @@ class board:
             ['R','N','B','Q','K','B','N','R']]
         self.white_taken = []
         self.black_taken = []
+        self.history = []
     
     # Side is True for white, False for black
     def print_board(self, side: bool = True):
@@ -31,11 +38,13 @@ class board:
             print('') # prints new line after each row
         print('  ---------------------------------\n    a   b   c   d   e   f   g   h')
 
+    # Returns position of square name in state, for example chessPos('a1') returns 7, 0
     def chessPos(self, sq: str) -> tuple[int, int]:
         row = ord('8') - ord(sq[1])
         col = ord(sq[0]) - ord('a')
         return row, col
 
+    # Inverse of chessPos for exaxmple listPos(7,0) returns 'a1'
     def listPos(self, row: int, col: int) -> str:
         return chr(ord('a') + col) + chr(ord('8') - row)
     
@@ -49,7 +58,7 @@ class board:
         elif val.isupper(): return 1
         else:               return 2
     
-    def move(self, initial: str, target: str):
+    def move(self, initial: str, target: str) -> bool:
         colini = self.colour(initial)
         coltar = self.colour(target)
         if (not (colini == coltar) and not(colini == 0)):
@@ -58,24 +67,30 @@ class board:
             piece = self.state[inir][inic]
             self.state[tarr][tarc] = piece
             self.state[inir][inic] = '0'
+            return True
+        else:
+            return False
 
     # 0 for up, 1 for down, 2 for left, 3 for right
     # returns pos of next piece, returns '00' if hitting wall
     def walk(self, target: str, dir: int) -> str:
-        if (('a' <= target[0] <= 'h') and ('1' <= target[1] <= '8')):
-            a = target[0]
-            b = target[1]
-            match dir:
-                case 0: a = chr(ord(a) - 1)
-                case 1: a = chr(ord(a) + 1)
-                case 2: b = chr(ord(b) - 1)
-                case 3: b = chr(ord(b) + 1)
+        if not (('a' <= target[0] <= 'h') and ('1' <= target[1] <= '8')):
+            return '00'
+        a = target[0]
+        b = target[1]
+        match dir:
+            case 0: b = chr(ord(b) + 1)
+            case 1: b = chr(ord(b) - 1)
+            case 2: a = chr(ord(a) - 1)
+            case 3: a = chr(ord(a) + 1)
+        if (('a' <= a <= 'h') and ('1' <= b <= '8')):
             return a + b
         else:
             return '00'
 
     def name(self, target: str) -> str:
-        if target == '00': return 'W'
+        if not (('a' <= target[0] <= 'h') and ('1' <= target[1] <= '8')):
+            return 'W'
         else:
             a, b = self.chessPos(target)
             return self.state[a][b]
@@ -85,23 +100,47 @@ class board:
         if side: king = 'K'
         else: king = 'k'
         for i in range(8):
-            for j in self.state[i]:
-                if j == king:
+            for j in range(8):
+                if self.state[i][j] == king:
                     return self.listPos(i, j)
     
            
-    # def inCheck(self, side: bool) -> bool:
-    #     loc = self.locateKing(side)
-        
-                
-        # up = self.look(loc,0)
-        # down = self.look(loc,1)
-        # left = self.look(loc,2)
-        # right = self.look(loc,3)
-        # upleft = self.look(up, 2)
-        # upright = self.look(up, 3)
-        # downleft = self.look(down,2)
-        # downright = self.look(down,3)
+    def inCheck(self, side: bool) -> bool:
+        loc = self.locateKing(side)
+        if (loc in self.danger(loc)):
+            return True
+        else:
+            return False
+
+    def isMate(self, side: bool) -> bool:
+        loc = self.locateKing(side)
+        safe = []
+        block = []
+        if not self.inCheck(loc):
+            return False
+        attack = self.kingHelper(loc)[1]
+        for i in attack:
+            temp = deepcopy(self)
+            temp.move(loc, i)
+            if not temp.inCheck(side):
+                safe.append(i)
+        if side:    clr = 1
+        else:       clr = 2
+        for i in char_range('a','h'):
+            for j in char_range('1','8'):
+                k = i + j
+                if (self.colour(k) == clr):
+                    t1, t2 = self.legal(k)
+                    t3 = t1 + t2
+                    for l in t3:
+                        temp = deepcopy(self)
+                        temp.move(k, l)
+                        if not temp.inCheck(side):
+                            safe.append(l)
+        if len(safe) == 0 and len (block) == 0:
+            return True
+        return False
+
 
     def rookHelper(self, target: str) -> tuple[list[str], list[str]]:
         clr = self.colour(target)
@@ -181,8 +220,36 @@ class board:
                 elif (self.colour(i) * clr == 2):
                     attack.append(i)
         return result, attack
-        
-        
+
+    def kingHelper(self, target: str):
+        clr = self.colour(target)
+        possible = []
+        result = []
+        attack = []
+        up = self.walk(target,0)
+        down = self.walk(target,1)
+        left = self.walk(target,2)
+        right = self.walk(target,3)
+        upleft = self.walk(up, 2)
+        upright = self.walk(up, 3)
+        downleft = self.walk(down,2)
+        downright = self.walk(down,3)
+        possible.append(up)
+        possible.append(down)
+        possible.append(left)
+        possible.append(right)
+        possible.append(upleft)
+        possible.append(upright) 
+        possible.append(downleft)
+        possible.append(downright)
+        for i in possible:
+            if (i != '00'):
+                if (self.colour(i) == 0):
+                    result.append(i)
+                elif (self.colour(i) * clr == 2):
+                    attack.append(i)
+        return result, attack
+
     # Input a position of a piece and return two list of all posible position
     def legal(self, target: str) -> tuple[list[str], list[str]]:
         piece = self.name(target)
@@ -197,30 +264,36 @@ class board:
                 pos4 = self.walk(pos1, 3)
                 if self.name(pos1) == '0':
                     result.append(pos1)
-                    if (target[1] == '2' and self.name(pos2) == '0'): result.append(pos2)
-                if (not pos3 == '00'): attack.append(pos3)
-                if (not pos4 == '00'): attack.append(pos4)
+                    if(self.name(pos2) == '0'):
+                        if (target[1] == '2'  and piece == 'P') or (target[1] == '7' and piece == 'p'):
+                            result.append(pos2)
+                if (pos3 != '00'): attack.append(pos3)
+                if (pos4 != '00'): attack.append(pos4)
                 return result, attack
             case 'R' | 'r':
-                rresult, rattack = self.rookHelper(target)
-                result = result + rresult
-                attack = attack + rattack
+                result, attack = self.rookHelper(target)
             case 'B' | 'b':
-                bresult, battack = self.bishopHelper(target)
-                result = result + bresult
-                attack = attack + battack
+                result, attack = self.bishopHelper(target)
             case 'Q' | 'q':
                 rresult, rattack = self.rookHelper(target)
                 bresult, battack = self.bishopHelper(target)
-                result = result + bresult + rresult
-                attack = attack + battack + rattack
+                result = bresult + rresult
+                attack = battack + rattack
             case 'N' | 'n':
-                nresult, nattack = self.knightHelper(target)
-                result = result + nresult
-                attack = attack + nattack
+                result, attack = self.knightHelper(target)
+            case 'K' | 'k':
+                result, attack = self.kingHelper(target)
+        return result, attack
 
-
-
-
-        print(attack)
-        print(result)
+    def danger(self, side: bool) -> list[str]:
+        if side:    clr = 1
+        else:       clr = 2
+        bad = []
+        for i in char_range('a','h'):
+            for j in char_range('1','8'):
+                k = i + j
+                if (clr * self.colour(k) == 2):
+                    result, attack = self.legal(k)
+                    bad = bad + result + attack
+        bad = list(set(bad))
+        return bad
