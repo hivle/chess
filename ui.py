@@ -12,6 +12,8 @@ class play:
     mxhold = -2
     myhold = -2
 
+    turn = True
+
     tempresult = []
     tempattack = []
     
@@ -29,7 +31,7 @@ class play:
     queen1 = image.load(os.path.join('style','pixle','queen1.png'))
     rook = image.load(os.path.join('style','pixle','rook.png'))
     rook1 = image.load(os.path.join('style','pixle','rook1.png'))
-
+    
     selected = (-1, -1)
     isSelected = False
 
@@ -74,27 +76,39 @@ class play:
         mx,my = mouse.get_pos()
         mb = mouse.get_pressed()
         sx, sy = self.selected
+
         if mb[2]:
             self.isSelected = False
             self.selected = (-1,-1)
-            self.draw_board()
-        elif (mb[0]):
+            self.draw_board(side)
+        elif mb[0]:
+
             if self.mbhold:
                 mx = self.mxhold
                 my = self.myhold
 
             if side: sx,sy = mx // self.square, my // self.square
             else: sx,sy = 7 - mx//self.square, 7 - my // self.square
-            self.tempresult, self.tempattack = self.new.legal(self.new.listPos(sy,sx))
-            print(self.tempresult)
-            print(self.tempattack)
+
+            if (self.isSelected):
+                for i in self.tempattack + self.tempresult:
+                    if (self.new.listPos(sy,sx) == i):
+                        self.move(self.new.listPos(self.selected[1]//self.square,self.selected[0]//self.square)+i)
+                        self.isSelected = False
+                        self.turn = not self.turn
+                        
+            if (self.turn and (self.new.colour(self.new.listPos(sy,sx)) == 1)) or (not self.turn and (self.new.colour(self.new.listPos(sy,sx)) == 2)):
+                self.tempresult, self.tempattack = self.new.legal(self.new.listPos(sy,sx))
+            else:
+                self.tempresult, self.tempattack = [],[]
+            #print(self.tempresult)
+            #print(self.tempattack)
 
             if side: sx, sy = sx * self.square, sy * self.square
             else: sx, sy = (7 - sx) * self.square, (7-sy)*self.square
 
             self.isSelected = True
             self.selected = sx, sy
-            draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.size//100)
             
         if (self.isSelected):
             draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.size//100)
