@@ -10,6 +10,8 @@ class board:
         self.turn = True # True for white, False for black
         self.white_castle = True
         self.black_castle = True
+        self.white_castle_long= True
+        self.black_castle_long = True
 
         self.state = [
             ['r','n','b','q','k','b','n','r'],
@@ -20,6 +22,8 @@ class board:
             ['0','0','0','0','0','0','0','0'],
             ['P','P','P','P','P','P','P','P'],
             ['R','N','B','Q','K','B','N','R']]
+
+        
         self.white_taken = []
         self.black_taken = []
         self.history = []
@@ -57,6 +61,7 @@ class board:
         if val == '0':      return 0
         elif val.isupper(): return 1
         else:               return 2
+
     
     def move(self, initial: str, target: str) -> bool:
         colini = self.colour(initial)
@@ -67,6 +72,25 @@ class board:
                 for j, col in enumerate(row):
                     if col == 'x' or col == 'X':
                         self.state[i][j] = '0'
+
+        if self.name(initial) == 'K':
+            #if self.white_castle:
+            #    self.target == 'g1'
+
+            self.white_castle, self.white_castle_long = False, False
+        if self.name(initial) == 'k':
+            self.black_castle, self.black_castle_long = False, False
+        if self.name(initial) == 'R':
+            if self.white_castle:
+                if self.name('h1') == 'R' and initial == 'h1':self.white_castle == False
+            if self.white_castle_long:
+                if self.name('a1') == 'R' and initial == 'a1': self.white_castle_long == False
+        if self.name(initial) == 'r':
+            if self.black_castle:
+                if self.name('h8') == 'r' and initial == 'h8': self.black_castle == False
+            if self.black_castle_long:
+                if self.name('a8') == 'r' and initial == 'a8': self.black_castle_long == False
+            
 
         if self.name(initial) == 'P' or self.name(initial) == 'p':
             pos1 = self.walk(initial, colini - 1) # 1 sqaure front of target
@@ -240,6 +264,7 @@ class board:
         possible.append(self.walk(self.walk(t3, 0), 0))
         possible.append(self.walk(self.walk(t4, 0), 0))
         possible.append(self.walk(self.walk(t4, 1), 1))
+
         for i in possible:
             if (i != '00'):
                 if (self.colour(i) == 0):
@@ -269,6 +294,23 @@ class board:
         possible.append(upright) 
         possible.append(downleft)
         possible.append(downright)
+
+        if clr == 1:
+            if self.white_castle:
+                if (self.colour(right) == 0) and not (self.colour(self.walk(right,3)) == 1):
+                    possible.append(self.walk(right,3))
+            if self.white_castle_long:
+                if self.colour(left) == 0 and self.colour(self.walk(left,2)) == 0 and not self.colour(self.walk(self.walk(left,2),2)) == 1:
+                    possible.append(self.walk(self.walk(left,2)),2)
+        elif clr == 2:
+            if self.black_castle:
+                if self.colour(left) == 0 and not self.colour(self.walk(left,2)) == 2:
+                    possible.append(self.walk(left,2))
+            if self.black_castle_long:
+                if self.colour(right) == 0 and self.colour(self.walk(right,3)) == 0 and not self.colour(self.walk(self.walk(right,3),3)) == 2:
+                    possible.append(self.colour(self.walk(self.walk(right,3),3)))
+
+
         for i in possible:
             if (i != '00'):
                 if (self.colour(i) == 0):
@@ -324,3 +366,5 @@ class board:
                     bad = bad + result + attack
         bad = list(set(bad))
         return bad
+
+## TODO: Castle, Pawn promition, checkmate, checkking red circle

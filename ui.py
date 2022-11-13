@@ -55,6 +55,8 @@ class play:
 
         self.screen = display.set_mode((size, size))
 
+    
+
 
     def move(self, m: str) -> bool:
         start = m[0] + m[1]
