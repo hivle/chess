@@ -7,7 +7,7 @@ class play:
     size = 600
     square = size // 8
     pieceSize = size/10
-    white,black = (230,196,146),(84,54,36)
+    white,black,green = (230,196,146),(84,54,36),(0,153,76)
     bishop = image.load(os.path.join('style','pixle','bishop.png'))
     bishop1 = image.load(os.path.join('style','pixle','bishop1.png'))
     king = image.load(os.path.join('style','pixle','king.png'))
@@ -20,6 +20,9 @@ class play:
     queen1 = image.load(os.path.join('style','pixle','queen1.png'))
     rook = image.load(os.path.join('style','pixle','rook.png'))
     rook1 = image.load(os.path.join('style','pixle','rook1.png'))
+
+    selected = (-1, -1)
+    isSelected = False
 
     def __init__(self, side: bool = True, size: int = 600):
         self.size = (size // 8) * 8
@@ -57,7 +60,26 @@ class play:
             squarey = (self.size - my) // self.square
         return squarex, squarey
 
-        
+    # draw green box under mouse
+    def select(self, mx: int, my: int, mb: tuple[bool, bool, bool] | tuple[bool, bool, bool, bool, bool],side: bool = True)->tuple[int, int]:
+        sx, sy = self.selected
+        if mb[2]:
+            self.isSelected = False
+            self.selected = (-1,-1)
+            self.draw_board()
+        elif (mb[0]):
+            sx = mx // self.square
+            sy = my // self.square
+            sx = sx * self.square
+            sy = sy * self.square
+            self.isSelected = True
+            self.selected = sx, sy
+            draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.size//100)
+        elif (self.isSelected):
+            draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.size//100)
+
+
+
     
     def draw_board(self, side: bool = True):
         sq = []
@@ -148,23 +170,16 @@ def main():
     side = True
     g1 = play(side)
     run=True
-
     while run:
         for e in event.get():       
             if e.type == QUIT:      
                 run=False
-        g1.draw_board()
+        g1.draw_board(side)
 
         mx,my = mouse.get_pos()
         mb = mouse.get_pressed()
-
-        sx, sy = g1.translate(mx, my, side)
-        sx = sx * g1.square
-        sy = sy * g1.square
-
-
-        if mb[0]:
-            draw.rect(g1.screen, (0,153,76), (sx, sy, g1.square, g1.square), 10)
+        g1.select(mx,my,mb,side)
+                   
 
 
         #m = 'e2e4'
@@ -177,6 +192,7 @@ def main():
         #else:
             #g1.draw_board()
         display.flip()
+    quit()
 
 
 if __name__ == "__main__":
