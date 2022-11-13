@@ -88,17 +88,6 @@ class play:
             self.tempresult, self.tempattack = self.new.legal(self.new.listPos(sy,sx))
             print(self.tempresult)
             print(self.tempattack)
-            for i in self.tempresult:
-                tempx, tempy = self.new.chessPos(i)
-                if side: tempx, tempy = tempx * self.square, tempy * self.square
-                else: tempx, tempy = self.size - tempx * self.square - self.square, self.size - tempy * self.square - self.square
-                draw.circle(self.screen, self.green, (tempy + self.square//2, tempx + self.square//2), self.square//7)
-            for i in self.tempattack:
-                tempx, tempy = self.new.chessPos(i)
-                if side: tempx, tempy = tempx * self.square, tempy * self.square
-                else: tempx, tempy = self.size - tempx * self.square - self.square, self.size - tempy * self.square - self.square
-                # attackable unit
-                draw.rect(self.screen, self.red, (tempy, tempx, self.square, self.square), self.size//100)
 
             if side: sx, sy = sx * self.square, sy * self.square
             else: sx, sy = (7 - sx) * self.square, (7-sy)*self.square
@@ -107,7 +96,7 @@ class play:
             self.selected = sx, sy
             draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.size//100)
             
-        elif (self.isSelected):
+        if (self.isSelected):
             draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.size//100)
             for i in self.tempresult:
                 tempx, tempy = self.new.chessPos(i)
