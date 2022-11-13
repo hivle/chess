@@ -101,8 +101,6 @@ class play:
                 self.tempresult, self.tempattack = self.new.legal(self.new.listPos(sy,sx))
             else:
                 self.tempresult, self.tempattack = [],[]
-            #print(self.tempresult)
-            #print(self.tempattack)
 
             if side: sx, sy = sx * self.square, sy * self.square
             else: sx, sy = (7 - sx) * self.square, (7-sy)*self.square

@@ -61,12 +61,39 @@ class board:
     def move(self, initial: str, target: str) -> bool:
         colini = self.colour(initial)
         coltar = self.colour(target)
+        enp = False
+        if self.name(target) != 'x' and self.name(target) != 'X':
+            for i, row in enumerate(self.state):
+                for j, col in enumerate(row):
+                    if col == 'x' or col == 'X':
+                        self.state[i][j] = '0'
+
+        if self.name(initial) == 'P' or self.name(initial) == 'p':
+            pos1 = self.walk(initial, colini - 1) # 1 sqaure front of target
+            pos2 = self.walk(pos1, colini - 1)   # 2 squares front of target
+
+            if (self.name(target) == 'x' or self.name(target) == 'X'):
+                
+                if coltar == 1: pos3 = self.walk(target, 0)
+                elif coltar == 2: pos3 = self.walk(target,1)
+
+                k1, k2 = self.chessPos(pos3)
+                self.state[k1][k2] = '0'
+    
+            result = self.legal(initial)[0]
+            if (pos2 in result) and (target == pos2):
+                enp = True
+
         if (not (colini == coltar) and not(colini == 0)):
             inir, inic = self.chessPos(initial)
             tarr, tarc = self.chessPos(target)
             piece = self.state[inir][inic]
             self.state[tarr][tarc] = piece
             self.state[inir][inic] = '0'
+            if enp:
+                markx, marky = self.chessPos(pos1)
+                if colini == 1: self.state[markx][marky] = 'X'
+                elif colini == 2: self.state[markx][marky] = 'x'
             return True
         else:
             return False
