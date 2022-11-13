@@ -267,8 +267,8 @@ class board:
                     if(self.name(pos2) == '0'):
                         if (target[1] == '2'  and piece == 'P') or (target[1] == '7' and piece == 'p'):
                             result.append(pos2)
-                if (pos3 != '00'): attack.append(pos3)
-                if (pos4 != '00'): attack.append(pos4)
+                if (self.colour(pos3) * clr) == 2: attack.append(pos3)
+                if (self.colour(pos4) * clr) == 2: attack.append(pos4)
                 return result, attack
             case 'R' | 'r':
                 result, attack = self.rookHelper(target)

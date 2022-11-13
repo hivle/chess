@@ -7,7 +7,16 @@ class play:
     size = 600
     square = size // 8
     pieceSize = size/10
-    white,black,green = (230,196,146),(84,54,36),(0,153,76)
+    cent = (square - pieceSize)//2
+    mbhold = False
+    mxhold = -2
+    myhold = -2
+
+    tempresult = []
+    tempattack = []
+    
+
+    white,black,green,red = (230,196,146),(84,54,36),(0,153,76),(255,0,0)
     bishop = image.load(os.path.join('style','pixle','bishop.png'))
     bishop1 = image.load(os.path.join('style','pixle','bishop1.png'))
     king = image.load(os.path.join('style','pixle','king.png'))
@@ -61,22 +70,65 @@ class play:
         return squarex, squarey
 
     # draw green box under mouse
-    def select(self, mx: int, my: int, mb: tuple[bool, bool, bool] | tuple[bool, bool, bool, bool, bool],side: bool = True)->tuple[int, int]:
+    def select(self, side: bool = True)->tuple[int, int]:
+        mx,my = mouse.get_pos()
+        mb = mouse.get_pressed()
         sx, sy = self.selected
         if mb[2]:
             self.isSelected = False
             self.selected = (-1,-1)
             self.draw_board()
         elif (mb[0]):
-            sx = mx // self.square
-            sy = my // self.square
-            sx = sx * self.square
-            sy = sy * self.square
+            if self.mbhold:
+                mx = self.mxhold
+                my = self.myhold
+
+            if side: sx,sy = mx // self.square, my // self.square
+            else: sx,sy = 7 - mx//self.square, 7 - my // self.square
+            self.tempresult, self.tempattack = self.new.legal(self.new.listPos(sy,sx))
+            print(self.tempresult)
+            print(self.tempattack)
+            for i in self.tempresult:
+                tempx, tempy = self.new.chessPos(i)
+                if side: tempx, tempy = tempx * self.square, tempy * self.square
+                else: tempx, tempy = self.size - tempx * self.square - self.square, self.size - tempy * self.square - self.square
+                draw.circle(self.screen, self.green, (tempy + self.square//2, tempx + self.square//2), self.square//7)
+            for i in self.tempattack:
+                tempx, tempy = self.new.chessPos(i)
+                if side: tempx, tempy = tempx * self.square, tempy * self.square
+                else: tempx, tempy = self.size - tempx * self.square - self.square, self.size - tempy * self.square - self.square
+                # attackable unit
+                draw.rect(self.screen, self.red, (tempy, tempx, self.square, self.square), self.size//100)
+
+            if side: sx, sy = sx * self.square, sy * self.square
+            else: sx, sy = (7 - sx) * self.square, (7-sy)*self.square
+
             self.isSelected = True
             self.selected = sx, sy
             draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.size//100)
+            
         elif (self.isSelected):
             draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.size//100)
+            for i in self.tempresult:
+                tempx, tempy = self.new.chessPos(i)
+                if side: tempx, tempy = tempx * self.square, tempy * self.square
+                else: tempx, tempy = self.size - tempx * self.square - self.square, self.size - tempy * self.square - self.square
+                draw.circle(self.screen, self.green, (tempy + self.square//2, tempx + self.square//2), self.square//7)
+            for i in self.tempattack:
+                tempx, tempy = self.new.chessPos(i)
+                if side: tempx, tempy = tempx * self.square, tempy * self.square
+                else: tempx, tempy = self.size - tempx * self.square - self.square, self.size - tempy * self.square - self.square
+                # attackable unit
+                draw.rect(self.screen, self.red, (tempy, tempx, self.square, self.square), self.size//100)
+
+        #determine if the mouse is being held
+        mb = mouse.get_pressed()
+        if mb[0]:
+            self.mbhold = True
+            self.mxhold = mx
+            self.myhold = my
+        else:
+            self.mbhold = False
 
 
 
@@ -176,9 +228,9 @@ def main():
                 run=False
         g1.draw_board(side)
 
-        mx,my = mouse.get_pos()
-        mb = mouse.get_pressed()
-        g1.select(mx,my,mb,side)
+        ##mx,my = mouse.get_pos()
+        ##mb = mouse.get_pressed()
+        g1.select(side)
                    
 
 
