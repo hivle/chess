@@ -104,22 +104,20 @@ class board:
 
         #TODO possible redundant castle check
         elif self.name(initial) == 'K':
-            dan = self.danger(colini == 1)
             if self.white_castle and target == 'g1':
                 rooki, rookt = 'h1', 'f1'
-                cas = rookt not in dan and target not in dan and initial not in dan
+                cas = True
             elif self.white_castle_long and target == 'c1':
                 rooki, rookt = 'a1', 'd1'
-                cas = rookt not in dan and target not in dan and initial not in dan
+                cas = True
 
         elif self.name(initial) == 'k':
-            dan = self.danger(colini == 1)
             if self.black_castle and target == 'g8':
                 rooki, rookt = 'h8', 'f8'
-                cas = rookt not in dan and target not in dan and initial not in dan
+                cas = True
             elif self.black_castle_long and target == 'c8':
                 rooki, rookt = 'a8', 'd8'
-                cas = rookt not in dan and target not in dan and initial not in dan
+                cas = True
 
 
         if (not (colini == coltar) and not(colini == 0)):
@@ -314,13 +312,23 @@ class board:
         possible.append(downleft)
         possible.append(downright)
 
-    # Castle check
-        if (self.white_castle and clr == 1) or (self.black_castle_long and clr == 2):
-            if self.colour(right) == 0 and (not self.colour(self.walk(right,3)) == (3 - clr)):
-                possible.append(self.walk(right,3))
-        if (self.white_castle_long and clr == 1) or (self.black_castle and clr == 2):
-            if self.colour(left) == 0 and (not self.colour(self.walk(left,2)) == (3 - clr)):
-                possible.append(self.walk(left,2))
+        # Castle check
+        leftleft = self.walk(left, 2)
+        rightright = self.walk(right, 3)
+
+        if self.recur:
+            if (self.white_castle and clr == 1) or (self.black_castle_long and clr == 2):
+                self.recur = False
+                dan = self.danger(clr == 1)
+                print(dan)
+                if self.colour(right) == 0 and (not self.colour(rightright) == (3 - clr)) and (rightright not in dan) and (right not in dan) and (target not in dan):
+                    possible.append(self.walk(right,3))
+            if (self.white_castle_long and clr == 1) or (self.black_castle and clr == 2):
+                self.recur = False
+                dan = self.danger(clr == 1)
+                if self.colour(left) == 0 and (not self.colour(leftleft) == (3 - clr)) and (leftleft not in dan) and (left not in dan) and (target not in dan):
+                    possible.append(self.walk(left,2))
+            self.recur = True
             
 
         for i in possible:
@@ -369,7 +377,6 @@ class board:
         return result, attack
 
     def isSafe(self, side: bool, target: str) -> bool:
-        print(self.danger(side))
         return (target in self.danger(side))
 
     def danger(self, side: bool) -> list[str]:
@@ -381,8 +388,8 @@ class board:
                 k = i + j
                 if (clr * self.colour(k) == 2):
                     result, attack = self.legal(k)
-                    bad = bad + result + attack
+                    bad = bad + attack
         bad = list(set(bad))
         return bad
 
-## TODO: Castle, Pawn promition, checkmate, checkking red circle
+## TODO: Pawn promition, checkmate, checkking red circle
