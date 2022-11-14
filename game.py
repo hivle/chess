@@ -432,4 +432,4 @@ class board:
         bad = list(set(bad))
         return bad
 
-## TODO: Pawn promition, checkmate, add repeat rule, add cannot move into check, add menu, add backtracks
+## TODO: Pawn promition, add menu, add backtracks

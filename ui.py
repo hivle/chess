@@ -1,6 +1,7 @@
 import os
 from game import board
 from pygame import *
+#import psutil
 
 def load_images(path_to_directory):
     image_dict = {}
@@ -85,12 +86,12 @@ class play:
 
             if (self.isSelected):
                 for i in self.tempattack + self.tempresult:
-                    if (self.new.listPos(sy,sx) == i):
-                        if side:self.new.move(self.new.listPos(self.selected[1]//self.square,self.selected[0]//self.square),i)
-                        else: self.new.move(self.new.listPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square),i)
-
-                        self.isSelected = False
+                    if side: m = self.new.listPos(self.selected[1]//self.square,self.selected[0]//self.square)
+                    else: m = self.new.listPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square)
+                    if (self.new.listPos(sy,sx) == i) and self.new.moveTest(m,i):
+                        self.new.move(m,i)
                         self.turn = not self.turn
+                    self.isSelected = False
                         
             if (self.turn and (self.new.colour(self.new.listPos(sy,sx)) == 1)) or (not self.turn and (self.new.colour(self.new.listPos(sy,sx)) == 2)):
                 self.tempresult, self.tempattack = self.new.legal(self.new.listPos(sy,sx))
@@ -190,6 +191,7 @@ def main():
         elif g1.new.isMate(not side):
             g1.gameOver(not side)
             run = False
+        #print(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2)
         display.flip()
     quit()
 
