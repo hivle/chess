@@ -8,10 +8,13 @@ def char_range(c1, c2):
 class board:
     def __init__(self):
         self.turn = True # True for white, False for black
+
         self.white_castle = True
         self.black_castle = True
-        self.white_castle_long= True
+        self.white_castle_long = True
         self.black_castle_long = True
+        # Stops infinite recursion while calculating can king castle
+        self.recur = True
 
         self.state = [
             ['r','n','b','q','k','b','n','r'],
@@ -67,8 +70,8 @@ class board:
         x, y = self.chessPos(tar)
         self.state[x][y] = new
 
-    
-    def move(self, initial: str, target: str) -> bool:
+    # assumes valid moves only, initial and target are between 'a1' to 'h8'
+    def move(self, initial: str, target: str):
         colini = self.colour(initial)
         coltar = self.colour(target)
 
@@ -84,21 +87,7 @@ class board:
                     if col == 'x' or col == 'X':
                         self.state[i][j] = '0'
 
-        # When rook is moved that side can no longer castle
-        if self.name(initial) == 'R':
-            if self.white_castle:
-                if self.name('h1') == 'R' and initial == 'h1':self.white_castle == False
-            if self.white_castle_long:
-                if self.name('a1') == 'R' and initial == 'a1': self.white_castle_long == False
-
-        elif self.name(initial) == 'r':
-            if self.black_castle:
-                if self.name('h8') == 'r' and initial == 'h8': self.black_castle == False
-            if self.black_castle_long:
-                if self.name('a8') == 'r' and initial == 'a8': self.black_castle_long == False
-            
-
-        elif self.name(initial) == 'P' or self.name(initial) == 'p':
+        if self.name(initial) == 'P' or self.name(initial) == 'p':
             pos1 = self.walk(initial, colini - 1) # 1 sqaure front of target
             pos2 = self.walk(pos1, colini - 1)   # 2 squares front of target
 
@@ -113,24 +102,24 @@ class board:
             if (pos2 in result) and (target == pos2):
                 enp = True
 
+        #TODO possible redundant castle check
         elif self.name(initial) == 'K':
+            dan = self.danger(colini == 1)
             if self.white_castle and target == 'g1':
                 rooki, rookt = 'h1', 'f1'
-                cas = True
+                cas = rookt not in dan and target not in dan and initial not in dan
             elif self.white_castle_long and target == 'c1':
                 rooki, rookt = 'a1', 'd1'
-                cas = True
-            #TODO plus check for king check before castling
-            self.white_castle, self.white_castle_long = False, False
+                cas = rookt not in dan and target not in dan and initial not in dan
 
         elif self.name(initial) == 'k':
+            dan = self.danger(colini == 1)
             if self.black_castle and target == 'g8':
                 rooki, rookt = 'h8', 'f8'
-                cas = True
+                cas = rookt not in dan and target not in dan and initial not in dan
             elif self.black_castle_long and target == 'c8':
                 rooki, rookt = 'a8', 'd8'
-                cas = True
-            self.black_castle, self.black_castle_long = False, False
+                cas = rookt not in dan and target not in dan and initial not in dan
 
 
         if (not (colini == coltar) and not(colini == 0)):
@@ -146,8 +135,14 @@ class board:
                 if colini == 2:
                     self.setval(rookt, 'r')
                     self.setval(rooki, '0')
+        
+        # When rook is moved that colour can no longer castle that side
+        # when king is moved that colour can no longer castle at all
+        if initial == 'h1' or initial == 'e1': self.white_castle = False
+        elif initial == 'a1' or initial == 'e1': self.white_castle_long = False
+        elif initial == 'h8' or initial == 'e8': self.black_castle = False
+        elif initial == 'a8' or initial == 'e8': self.black_castle_long = False
 
-            self.print_board()
 
     # 0 for up, 1 for down, 2 for left, 3 for right
     # returns pos of next piece, returns '00' if hitting wall
@@ -185,7 +180,7 @@ class board:
            
     def inCheck(self, side: bool) -> bool:
         loc = self.locateKing(side)
-        return (loc in self.danger(loc))
+        return self.isSafe(side, loc)
 
     def isMate(self, side: bool) -> bool:
         loc = self.locateKing(side)
@@ -319,21 +314,14 @@ class board:
         possible.append(downleft)
         possible.append(downright)
 
-        if clr ==1:
-            if self.white_castle:
-                if self.colour(right) == 0 and not self.colour(self.walk(right,3)) == 1:
-                    possible.append(self.walk(right,3))
-            if self.white_castle_long:
-                if self.colour(left) == 0 and not self.colour(self.walk(left,2)) == 1:
-                    possible.append(self.walk(left,2))
-        elif clr == 2:
-            if self.black_castle:
-                if self.colour(left) == 0 and not self.colour(self.walk(left,2)) == 2:
-                    possible.append(self.walk(left,2))
-            if self.black_castle_long:
-                if self.colour(right) == 0 and not self.colour(self.walk(right,3)) == 2:
-                    possible.append(self.walk(right,3))
-
+    # Castle check
+        if (self.white_castle and clr == 1) or (self.black_castle_long and clr == 2):
+            if self.colour(right) == 0 and (not self.colour(self.walk(right,3)) == (3 - clr)):
+                possible.append(self.walk(right,3))
+        if (self.white_castle_long and clr == 1) or (self.black_castle and clr == 2):
+            if self.colour(left) == 0 and (not self.colour(self.walk(left,2)) == (3 - clr)):
+                possible.append(self.walk(left,2))
+            
 
         for i in possible:
             if (i != '00'):
@@ -341,6 +329,7 @@ class board:
                     result.append(i)
                 elif (self.colour(i) * clr == 2):
                     attack.append(i)
+
         return result, attack
 
     # Input a position of a piece and return two list of all posible position
@@ -378,6 +367,10 @@ class board:
             case 'K' | 'k':
                 result, attack = self.kingHelper(target)
         return result, attack
+
+    def isSafe(self, side: bool, target: str) -> bool:
+        print(self.danger(side))
+        return (target in self.danger(side))
 
     def danger(self, side: bool) -> list[str]:
         if side:    clr = 1

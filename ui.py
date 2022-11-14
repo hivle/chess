@@ -11,7 +11,7 @@ class play:
     mbhold = False
     mxhold = -2
     myhold = -2
-
+    #TODO add turn to game.py instead of here
     turn = True
 
     tempresult = []
