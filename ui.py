@@ -55,8 +55,6 @@ class play:
 
         self.screen = display.set_mode((size, size))
 
-    
-
 
     def move(self, m: str) -> bool:
         start = m[0] + m[1]
@@ -132,8 +130,6 @@ class play:
             self.myhold = my
         else:
             self.mbhold = False
-
-
 
     
     def draw_board(self, side: bool = True):
@@ -223,6 +219,7 @@ class play:
 
 def main():
     side = True
+    #TODO fix translation bug on black and movement
     g1 = play(side)
     run=True
     while run:
@@ -230,22 +227,7 @@ def main():
             if e.type == QUIT:      
                 run=False
         g1.draw_board(side)
-
-        ##mx,my = mouse.get_pos()
-        ##mb = mouse.get_pressed()
         g1.select(side)
-                   
-
-
-        #m = 'e2e4'
-
-        
-
-        #if not (g1.move(m)):
-            #g1.draw_board()
-            #print("ilegal move")
-        #else:
-            #g1.draw_board()
         display.flip()
     quit()
 

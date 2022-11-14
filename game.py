@@ -57,42 +57,48 @@ class board:
         row, col = self.chessPos(sq)
         if row > 7 or row < 0 or col < 0 or col > 7:
             return 0
-        val = self.state[row][col]
+        val = self.name(sq)
         if val == '0':      return 0
         elif val.isupper(): return 1
         else:               return 2
+
+    # enter square name, changes the value to new, assumes valid input
+    def setval(self, tar: str, new: str):
+        x, y = self.chessPos(tar)
+        self.state[x][y] = new
 
     
     def move(self, initial: str, target: str) -> bool:
         colini = self.colour(initial)
         coltar = self.colour(target)
+
+        # en passant, enables when starting pawn moves 2 squares
         enp = False
+
+        # Castle
+        cas = False
+
         if self.name(target) != 'x' and self.name(target) != 'X':
             for i, row in enumerate(self.state):
                 for j, col in enumerate(row):
                     if col == 'x' or col == 'X':
                         self.state[i][j] = '0'
 
-        if self.name(initial) == 'K':
-            #if self.white_castle:
-            #    self.target == 'g1'
-
-            self.white_castle, self.white_castle_long = False, False
-        if self.name(initial) == 'k':
-            self.black_castle, self.black_castle_long = False, False
+        # When rook is moved that side can no longer castle
         if self.name(initial) == 'R':
             if self.white_castle:
                 if self.name('h1') == 'R' and initial == 'h1':self.white_castle == False
             if self.white_castle_long:
                 if self.name('a1') == 'R' and initial == 'a1': self.white_castle_long == False
-        if self.name(initial) == 'r':
+
+        elif self.name(initial) == 'r':
             if self.black_castle:
                 if self.name('h8') == 'r' and initial == 'h8': self.black_castle == False
             if self.black_castle_long:
                 if self.name('a8') == 'r' and initial == 'a8': self.black_castle_long == False
             
 
-        if self.name(initial) == 'P' or self.name(initial) == 'p':
+        elif self.name(initial) == 'P' or self.name(initial) == 'p':
             pos1 = self.walk(initial, colini - 1) # 1 sqaure front of target
             pos2 = self.walk(pos1, colini - 1)   # 2 squares front of target
 
@@ -101,26 +107,47 @@ class board:
                 if coltar == 1: pos3 = self.walk(target, 0)
                 elif coltar == 2: pos3 = self.walk(target,1)
 
-                k1, k2 = self.chessPos(pos3)
-                self.state[k1][k2] = '0'
+                self.setval(pos3, '0')
     
             result = self.legal(initial)[0]
             if (pos2 in result) and (target == pos2):
                 enp = True
 
+        elif self.name(initial) == 'K':
+            if self.white_castle and target == 'g1':
+                rooki, rookt = 'h1', 'f1'
+                cas = True
+            elif self.white_castle_long and target == 'c1':
+                rooki, rookt = 'a1', 'd1'
+                cas = True
+            #TODO plus check for king check before castling
+            self.white_castle, self.white_castle_long = False, False
+
+        elif self.name(initial) == 'k':
+            if self.black_castle and target == 'g8':
+                rooki, rookt = 'h8', 'f8'
+                cas = True
+            elif self.black_castle_long and target == 'c8':
+                rooki, rookt = 'a8', 'd8'
+                cas = True
+            self.black_castle, self.black_castle_long = False, False
+
+
         if (not (colini == coltar) and not(colini == 0)):
-            inir, inic = self.chessPos(initial)
-            tarr, tarc = self.chessPos(target)
-            piece = self.state[inir][inic]
-            self.state[tarr][tarc] = piece
-            self.state[inir][inic] = '0'
+            self.setval(target, self.name(initial))
+            self.setval(initial, '0')
             if enp:
-                markx, marky = self.chessPos(pos1)
-                if colini == 1: self.state[markx][marky] = 'X'
-                elif colini == 2: self.state[markx][marky] = 'x'
-            return True
-        else:
-            return False
+                if colini == 1: self.setval(pos1, 'X')
+                elif colini == 2: self.setval(pos1, 'x')
+            if cas:
+                if colini == 1:
+                    self.setval(rookt, 'R')
+                    self.setval(rooki, '0')
+                if colini == 2:
+                    self.setval(rookt, 'r')
+                    self.setval(rooki, '0')
+
+            self.print_board()
 
     # 0 for up, 1 for down, 2 for left, 3 for right
     # returns pos of next piece, returns '00' if hitting wall
@@ -150,18 +177,15 @@ class board:
     def locateKing(self, side: bool) -> str:
         if side: king = 'K'
         else: king = 'k'
-        for i in range(8):
-            for j in range(8):
-                if self.state[i][j] == king:
-                    return self.listPos(i, j)
+        temp = self.state
+        for row in temp:
+            if king in row:
+                return self.listPos(temp.index(row), row.index(king))
     
            
     def inCheck(self, side: bool) -> bool:
         loc = self.locateKing(side)
-        if (loc in self.danger(loc)):
-            return True
-        else:
-            return False
+        return (loc in self.danger(loc))
 
     def isMate(self, side: bool) -> bool:
         loc = self.locateKing(side)
@@ -253,7 +277,7 @@ class board:
         result = []
         attack = []
         t1 = self.walk(target, 0)
-        t2 = self.walk(target, 1) 
+        t2 = self.walk(target, 1)
         t3 = self.walk(target, 2)
         t4 = self.walk(target, 3)
         possible.append(self.walk(self.walk(t1, 2), 2))
@@ -295,20 +319,20 @@ class board:
         possible.append(downleft)
         possible.append(downright)
 
-        if clr == 1:
+        if clr ==1:
             if self.white_castle:
-                if (self.colour(right) == 0) and not (self.colour(self.walk(right,3)) == 1):
+                if self.colour(right) == 0 and not self.colour(self.walk(right,3)) == 1:
                     possible.append(self.walk(right,3))
             if self.white_castle_long:
-                if self.colour(left) == 0 and self.colour(self.walk(left,2)) == 0 and not self.colour(self.walk(self.walk(left,2),2)) == 1:
-                    possible.append(self.walk(self.walk(left,2)),2)
+                if self.colour(left) == 0 and not self.colour(self.walk(left,2)) == 1:
+                    possible.append(self.walk(left,2))
         elif clr == 2:
             if self.black_castle:
                 if self.colour(left) == 0 and not self.colour(self.walk(left,2)) == 2:
                     possible.append(self.walk(left,2))
             if self.black_castle_long:
-                if self.colour(right) == 0 and self.colour(self.walk(right,3)) == 0 and not self.colour(self.walk(self.walk(right,3),3)) == 2:
-                    possible.append(self.colour(self.walk(self.walk(right,3),3)))
+                if self.colour(right) == 0 and not self.colour(self.walk(right,3)) == 2:
+                    possible.append(self.walk(right,3))
 
 
         for i in possible:
@@ -334,6 +358,7 @@ class board:
                 if self.name(pos1) == '0':
                     result.append(pos1)
                     if(self.name(pos2) == '0'):
+                        # When white pawn is on 7th row or black pawn is on 2nd row, they can move two squares
                         if (target[1] == '2'  and piece == 'P') or (target[1] == '7' and piece == 'p'):
                             result.append(pos2)
                 if (self.colour(pos3) * clr) == 2: attack.append(pos3)
