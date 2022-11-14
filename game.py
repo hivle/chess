@@ -1,5 +1,4 @@
 from copy import deepcopy
-#maybe remove deepcopy
 
 def char_range(c1, c2):
     for c in range(ord(c1), ord(c2)+1):
@@ -179,13 +178,15 @@ class board:
         return self.isSafe(side, loc)
 
     def isMate(self, side: bool) -> bool:
+        side = not side
         loc = self.locateKing(side)
         safe = []
         block = []
-        if not self.inCheck(loc):
+        if not self.inCheck(side):
             return False
-        attack = self.kingHelper(loc)[1]
-        for i in attack:
+        attack, result = self.kingHelper(loc)
+        total = attack + result
+        for i in total:
             temp = deepcopy(self)
             temp.move(loc, i)
             if not temp.inCheck(side):
@@ -204,6 +205,7 @@ class board:
                         temp.move(k, l)
                         if not temp.inCheck(side):
                             safe.append(l)
+
         if len(safe) == 0 and len (block) == 0:
             return True
         return False
@@ -342,6 +344,7 @@ class board:
     def legal(self, target: str) -> tuple[list[str], list[str]]:
         piece = self.name(target)
         clr = self.colour(target)
+        #if self.inCheck(clr == 1) and piece != 'k' and piece != 'K': return []
         result = []
         attack = []
         match piece:
@@ -390,4 +393,4 @@ class board:
         bad = list(set(bad))
         return bad
 
-## TODO: Pawn promition, checkmate, checkking red circle, add repeat rule
+## TODO: Pawn promition, checkmate, add repeat rule, add draw, add cannot move into check, add menu

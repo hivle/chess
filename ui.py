@@ -15,7 +15,7 @@ class play:
     new = board()
     size = 600
     square = size // 8
-    pieceSize = size/10
+    pieceSize = size//10
     cent = (square - pieceSize)//2
     mbhold = False
     mxhold = -2
@@ -45,18 +45,24 @@ class play:
 
         self.screen = display.set_mode((size, size))
 
-    # translate mouse position to cooridnates on the board, side = True means white, else black
-    def translate(self, mx: int, my: int, side: bool = True) -> tuple[int, int]:
-        if side:
-            squarex = mx // self.square
-            squarey = my // self.square
-        else:
-            squarex = (self.size - mx) // self.square
-            squarey = (self.size - my) // self.square
-        return squarex, squarey
+    def gameOver(self, side: bool):
+        print("game over") #TODO
+        if side: print("White WOn")
+        else: print("balck won") 
 
     # determine select and selcect move
     def select(self, side: bool = True):
+
+        # mark king if it's in check
+        if self.new.inCheck(True):
+            x,y = self.new.chessPos(self.new.locateKing(True))
+            if not side: x, y = 7-x, 7-y
+            draw.rect(self.screen, self.red, (y*self.square, x*self.square, self.square, self.square), self.square//16)
+        elif self.new.inCheck(False):
+            x,y = self.new.chessPos(self.new.locateKing(False))
+            if not side: x, y = 7-x, 7-y
+            draw.rect(self.screen, self.red, (y*self.square, x*self.square, self.square, self.square), self.square//16)
+
         mx,my = mouse.get_pos()
         mb = mouse.get_pressed()
         sx, sy = self.selected
@@ -64,7 +70,7 @@ class play:
         if mb[2]:
             self.isSelected = False
             self.selected = (-1,-1)
-            self.draw_board(side)
+
         elif mb[0]:
 
             if self.mbhold:
@@ -88,13 +94,13 @@ class play:
                 self.tempresult, self.tempattack = [],[]
 
             if side: sx, sy = sx * self.square, sy * self.square
-            else: sx, sy = (7 - sx) * self.square, (7-sy)*self.square
+            else: sx, sy = (7 - sx) * self.square, (7 - sy)*self.square
 
             self.isSelected = True
             self.selected = sx, sy
             
         if (self.isSelected):
-            draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.size//100)
+            draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.square//16)
             for i in self.tempresult:
                 tempx, tempy = self.new.chessPos(i)
                 if side: tempx, tempy = tempx * self.square, tempy * self.square
@@ -105,7 +111,7 @@ class play:
                 if side: tempx, tempy = tempx * self.square, tempy * self.square
                 else: tempx, tempy = self.size - tempx * self.square - self.square, self.size - tempy * self.square - self.square
                 # attackable unit
-                draw.rect(self.screen, self.red, (tempy, tempx, self.square, self.square), self.size//100)
+                draw.rect(self.screen, self.red, (tempy, tempx, self.square, self.square), self.square//16)
 
         # determine if the left click is long hold
         mb = mouse.get_pressed()
@@ -125,13 +131,10 @@ class play:
                 else:
                     draw.rect(self.screen,self.white,(i*self.square,j*self.square,self.square, self.square))
 
-    #def lettertoword(self, letter: str):
-        
-        
     def draw_board(self, side: bool = True):
         self.draw_base(side)
         b = self.new.state
-        for i, r in enumerate(self.new.state):
+        for i, r in enumerate(b):
             for j, p in enumerate(r):
                 if side: row, col = i, j
                 else: row, col = 7 - i, 7 - j
@@ -141,7 +144,7 @@ class play:
                     case 'R':
                         self.screen.blit(self.chesspieces['rook'],(col * self.square + self.cent,row * self.square + self.cent))
                     case 'B':
-                        self.screen.blit(self.chesspieces['pawn'],(col * self.square + self.cent,row * self.square + self.cent))
+                        self.screen.blit(self.chesspieces['bishop'],(col * self.square + self.cent,row * self.square + self.cent))
                     case 'Q':
                         self.screen.blit(self.chesspieces['queen'],(col * self.square + self.cent,row * self.square + self.cent))
                     case 'N':
@@ -160,11 +163,10 @@ class play:
                         self.screen.blit(self.chesspieces['knight1'],(col * self.square + self.cent,row * self.square + self.cent))
                     case 'k':
                         self.screen.blit(self.chesspieces['king1'],(col * self.square + self.cent,row * self.square + self.cent))
-        #draw.circle(self.screen, (255,0,0), (100,100), 80, 10)
-                    
+        
 
 def main():
-    side = False
+    side = True
     g1 = play(side)
     run=True
     while run:
@@ -173,6 +175,9 @@ def main():
                 run=False
         g1.draw_board(side)
         g1.select(side)
+        if g1.new.isMate(side):
+            g1.gameOver(side)
+            run = False
         display.flip()
     quit()
 
