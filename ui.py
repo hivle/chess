@@ -11,7 +11,8 @@ class play:
     mbhold = False
     mxhold = -2
     myhold = -2
-    #TODO add turn to game.py instead of here
+
+    #turn is True for white and False for black
     turn = True
 
     tempresult = []
@@ -55,12 +56,6 @@ class play:
 
         self.screen = display.set_mode((size, size))
 
-
-    def move(self, m: str) -> bool:
-        start = m[0] + m[1]
-        end = m[2] + m[3]
-        return self.new.move(start, end)
-
     # translate mouse position to cooridnates on the board, side = True means white, else black
     def translate(self, mx: int, my: int, side: bool = True) -> tuple[int, int]:
         if side:
@@ -71,8 +66,8 @@ class play:
             squarey = (self.size - my) // self.square
         return squarex, squarey
 
-    # draw green box under mouse
-    def select(self, side: bool = True)->tuple[int, int]:
+    # determine select and selcect move
+    def select(self, side: bool = True):
         mx,my = mouse.get_pos()
         mb = mouse.get_pressed()
         sx, sy = self.selected
@@ -93,7 +88,9 @@ class play:
             if (self.isSelected):
                 for i in self.tempattack + self.tempresult:
                     if (self.new.listPos(sy,sx) == i):
-                        self.move(self.new.listPos(self.selected[1]//self.square,self.selected[0]//self.square)+i)
+                        if side: self.new.move(self.new.listPos(self.selected[1]//self.square,self.selected[0]//self.square),i)
+                        else: self.new.move(self.new.listPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square),i)
+                        self.new.print_board()
                         self.isSelected = False
                         self.turn = not self.turn
                         
@@ -122,7 +119,7 @@ class play:
                 # attackable unit
                 draw.rect(self.screen, self.red, (tempy, tempx, self.square, self.square), self.size//100)
 
-        #determine if the mouse is being held
+        # determine if the left click is long hold
         mb = mouse.get_pressed()
         if mb[0]:
             self.mbhold = True
@@ -218,8 +215,7 @@ class play:
                     
 
 def main():
-    side = True
-    #TODO fix translation bug on black and movement
+    side = False
     g1 = play(side)
     run=True
     while run:
