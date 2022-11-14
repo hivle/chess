@@ -10,7 +10,9 @@ def load_images(path_to_directory):
             key = filename[:-4]
             image_dict[key] = image.load(path)
     return image_dict
- 
+
+
+
 class play:
     new = board()
     size = 600
@@ -45,9 +47,10 @@ class play:
 
         self.screen = display.set_mode((size, size))
 
-    def gameOver(self, side: bool):
+    def gameOver(self, side: bool, draw: bool = False):
         print("game over") #TODO
-        if side: print("White WOn")
+        if draw: print("Draw")
+        elif side: print("white won")
         else: print("balck won") 
 
     # determine select and selcect move
@@ -83,8 +86,9 @@ class play:
             if (self.isSelected):
                 for i in self.tempattack + self.tempresult:
                     if (self.new.listPos(sy,sx) == i):
-                        if side: self.new.move(self.new.listPos(self.selected[1]//self.square,self.selected[0]//self.square),i)
+                        if side:self.new.move(self.new.listPos(self.selected[1]//self.square,self.selected[0]//self.square),i)
                         else: self.new.move(self.new.listPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square),i)
+
                         self.isSelected = False
                         self.turn = not self.turn
                         
@@ -175,8 +179,16 @@ def main():
                 run=False
         g1.draw_board(side)
         g1.select(side)
-        if g1.new.isMate(side):
+        if g1.new.isDraw(side):
+            g1.gameOver(side, True)
+            run = False
+        elif g1.new.isDraw(not side):
+            g1.gameOver(not side, True)
+        elif g1.new.isMate(side):
             g1.gameOver(side)
+            run = False
+        elif g1.new.isMate(not side):
+            g1.gameOver(not side)
             run = False
         display.flip()
     quit()

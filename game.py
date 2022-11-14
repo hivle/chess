@@ -1,4 +1,5 @@
 from copy import deepcopy
+from itertools import chain
 
 def char_range(c1, c2):
     for c in range(ord(c1), ord(c2)+1):
@@ -15,6 +16,8 @@ class board:
         # Stops infinite recursion while calculating can king castle
         self.recur = True
 
+        self.repeatedstate = 0
+
         self.state = [
             ['r','n','b','q','k','b','n','r'],
             ['p','p','p','p','p','p','p','p'],
@@ -25,10 +28,10 @@ class board:
             ['P','P','P','P','P','P','P','P'],
             ['R','N','B','Q','K','B','N','R']]
 
-        
         self.white_taken = []
         self.black_taken = []
         self.history = []
+        self.previousstate = self.state
     
     # Side is True for white, False for black
     def print_board(self, side: bool = True):
@@ -71,8 +74,14 @@ class board:
 
     # assumes valid moves only, initial and target are between 'a1' to 'h8'
     def move(self, initial: str, target: str):
+        self.previousstate = self.state
+
         colini = self.colour(initial)
         coltar = self.colour(target)
+
+        if colini * coltar == 2:
+            self.history.clear()
+            self.repeatedstate = 0
 
         # en passant, enables when starting pawn moves 2 squares
         enp = False
@@ -87,6 +96,8 @@ class board:
                         self.state[i][j] = '0'
 
         if self.name(initial) == 'P' or self.name(initial) == 'p':
+            self.history.clear()
+            self.repeatedstate = 0
             pos1 = self.walk(initial, colini - 1) # 1 sqaure front of target
             pos2 = self.walk(pos1, colini - 1)   # 2 squares front of target
 
@@ -137,6 +148,16 @@ class board:
         elif initial == 'a1' or initial == 'e1': self.white_castle_long = False
         elif initial == 'h8' or initial == 'e8': self.black_castle = False
         elif initial == 'a8' or initial == 'e8': self.black_castle_long = False
+        
+        tempmax = 0
+        for i in self.history:
+            count = 0
+            for j in self.history:
+                if i == j:
+                    count += 1
+                    tempmax = max(tempmax, count)
+        self.repeatedstate = max(tempmax, self.repeatedstate)
+        self.history.append(list(chain.from_iterable(self.state)))
 
 
     # 0 for up, 1 for down, 2 for left, 3 for right
@@ -160,7 +181,7 @@ class board:
     def moveTest(self, initial: str, target: str) -> bool:
         temp = deepcopy(self)
         temp.move(initial, target)
-        return not temp.inCheck(temp.colour(initial) == 1)
+        return not temp.inCheck(self.colour(initial) == 1)
         
 
     def name(self, target: str) -> str:
@@ -186,21 +207,11 @@ class board:
 
     def isMate(self, side: bool) -> bool:
         side = not side
-        loc = self.locateKing(side)
         safe = []
-        block = []
         if not self.inCheck(side):
             return False
-        attack, result = self.kingHelper(loc)
-        total = attack + result
-        for i in total:
-            temp = deepcopy(self)
-            temp.move(loc, i)
-            if not temp.inCheck(side):
-                safe.append(i)
         if side:    clr = 1
         else:       clr = 2
-
         for i in char_range('a','h'):
             for j in char_range('1','8'):
                 k = i + j
@@ -212,11 +223,30 @@ class board:
                         temp.move(k, l)
                         if not temp.inCheck(side):
                             safe.append(l)
+        return len(safe) == 0
 
-        if len(safe) == 0 and len (block) == 0:
-            return True
+
+    def isDraw(self, side: bool) -> bool:
+        # TODO needs to improve speed of history
+        if len(self.history) >= 50: return True
+        if self.repeatedstate >= 3: return True
+        side = not side
+        safe = []
+        if side:    clr = 1
+        else:       clr = 2
+        for i in char_range('a','h'):
+            for j in char_range('1','8'):
+                k = i + j
+                if (self.colour(k) == clr):
+                    t1, t2 = self.legal(k)
+                    t3 = t1 + t2
+                    for l in t3:
+                        temp = deepcopy(self)
+                        temp.move(k, l)
+                        if not temp.inCheck(side):
+                            safe.append(l)
+        if len(safe) == 0: return True
         return False
-
 
     def rookHelper(self, target: str) -> tuple[list[str], list[str]]:
         clr = self.colour(target)
@@ -400,4 +430,4 @@ class board:
         bad = list(set(bad))
         return bad
 
-## TODO: Pawn promition, checkmate, add repeat rule, add draw, add cannot move into check, add menu
+## TODO: Pawn promition, checkmate, add repeat rule, add 50 moves, add cannot move into check, add menu, add backtracks at least 5 moves
