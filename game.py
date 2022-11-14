@@ -1,4 +1,5 @@
 from copy import deepcopy
+#maybe remove deepcopy
 
 def char_range(c1, c2):
     for c in range(ord(c1), ord(c2)+1):
@@ -7,12 +8,11 @@ def char_range(c1, c2):
 # Lowercase for Black pieces, uppercase for White, 'N' is for knight
 class board:
     def __init__(self):
-        self.turn = True # True for white, False for black
-
         self.white_castle = True
         self.black_castle = True
         self.white_castle_long = True
         self.black_castle_long = True
+
         # Stops infinite recursion while calculating can king castle
         self.recur = True
 
@@ -102,7 +102,6 @@ class board:
             if (pos2 in result) and (target == pos2):
                 enp = True
 
-        #TODO possible redundant castle check
         elif self.name(initial) == 'K':
             if self.white_castle and target == 'g1':
                 rooki, rookt = 'h1', 'f1'
@@ -118,7 +117,6 @@ class board:
             elif self.black_castle_long and target == 'c8':
                 rooki, rookt = 'a8', 'd8'
                 cas = True
-
 
         if (not (colini == coltar) and not(colini == 0)):
             self.setval(target, self.name(initial))
@@ -194,6 +192,7 @@ class board:
                 safe.append(i)
         if side:    clr = 1
         else:       clr = 2
+
         for i in char_range('a','h'):
             for j in char_range('1','8'):
                 k = i + j
@@ -320,7 +319,6 @@ class board:
             if (self.white_castle and clr == 1) or (self.black_castle_long and clr == 2):
                 self.recur = False
                 dan = self.danger(clr == 1)
-                print(dan)
                 if self.colour(right) == 0 and (not self.colour(rightright) == (3 - clr)) and (rightright not in dan) and (right not in dan) and (target not in dan):
                     possible.append(self.walk(right,3))
             if (self.white_castle_long and clr == 1) or (self.black_castle and clr == 2):
@@ -388,8 +386,8 @@ class board:
                 k = i + j
                 if (clr * self.colour(k) == 2):
                     result, attack = self.legal(k)
-                    bad = bad + attack
+                    bad = bad + attack + result
         bad = list(set(bad))
         return bad
 
-## TODO: Pawn promition, checkmate, checkking red circle
+## TODO: Pawn promition, checkmate, checkking red circle, add repeat rule
