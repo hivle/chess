@@ -156,6 +156,13 @@ class board:
         else:
             return '00'
 
+    # returns true if safe else false
+    def moveTest(self, initial: str, target: str) -> bool:
+        temp = deepcopy(self)
+        temp.move(initial, target)
+        return not temp.inCheck(temp.colour(initial) == 1)
+        
+
     def name(self, target: str) -> str:
         if not (('a' <= target[0] <= 'h') and ('1' <= target[1] <= '8')):
             return 'W'
