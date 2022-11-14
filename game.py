@@ -1,5 +1,4 @@
 from copy import deepcopy
-from itertools import chain
 
 def char_range(c1, c2):
     for c in range(ord(c1), ord(c2)+1):
@@ -157,7 +156,13 @@ class board:
                     count += 1
                     tempmax = max(tempmax, count)
         self.repeatedstate = max(tempmax, self.repeatedstate)
-        self.history.append(list(chain.from_iterable(self.state)))
+        newstate = ""
+        for i in self.state:
+            tempstate = ""
+            for j in i:
+                tempstate = tempstate + j
+            newstate = newstate + tempstate
+        self.history.append(newstate)
 
 
     # 0 for up, 1 for down, 2 for left, 3 for right
@@ -207,7 +212,6 @@ class board:
 
     def isMate(self, side: bool) -> bool:
         side = not side
-        safe = []
         if not self.inCheck(side):
             return False
         if side:    clr = 1
@@ -222,16 +226,15 @@ class board:
                         temp = deepcopy(self)
                         temp.move(k, l)
                         if not temp.inCheck(side):
-                            safe.append(l)
-        return len(safe) == 0
+                            return False
+        return True
 
 
     def isDraw(self, side: bool) -> bool:
-        # TODO needs to improve speed of history
         if len(self.history) >= 50: return True
         if self.repeatedstate >= 3: return True
         side = not side
-        safe = []
+        c = self.inCheck(side)
         if side:    clr = 1
         else:       clr = 2
         for i in char_range('a','h'):
@@ -244,9 +247,8 @@ class board:
                         temp = deepcopy(self)
                         temp.move(k, l)
                         if not temp.inCheck(side):
-                            safe.append(l)
-        if len(safe) == 0: return True
-        return False
+                            return False 
+        return not c
 
     def rookHelper(self, target: str) -> tuple[list[str], list[str]]:
         clr = self.colour(target)
@@ -430,4 +432,4 @@ class board:
         bad = list(set(bad))
         return bad
 
-## TODO: Pawn promition, checkmate, add repeat rule, add 50 moves, add cannot move into check, add menu, add backtracks at least 5 moves
+## TODO: Pawn promition, checkmate, add repeat rule, add cannot move into check, add menu, add backtracks
