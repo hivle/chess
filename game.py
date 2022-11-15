@@ -66,7 +66,7 @@ class board:
         if row > 7 or row < 0 or col < 0 or col > 7:
             return 0
         val = self.name(sq)
-        if val == '0':      return 0
+        if val == '0' or val == 'x' or val == 'X':      return 0
         elif val.isupper(): return 1
         else:               return 2
 
@@ -264,16 +264,16 @@ class board:
         pos2 = self.walk(target, 1) 
         pos3 = self.walk(target, 2)
         pos4 = self.walk(target, 3)
-        while self.name(pos1) == '0':
+        while self.name(pos1) == '0' or self.name(pos1) == 'x' or self.name(pos1) == 'X':
             result.append(pos1)
             pos1 = self.walk(pos1,0)
-        while self.name(pos2) == '0':
+        while self.name(pos2) == '0' or self.name(pos2) == 'x' or self.name(pos2) == 'X':
             result.append(pos2)
             pos2 = self.walk(pos2,1)
-        while self.name(pos3) == '0':
+        while self.name(pos3) == '0' or self.name(pos3) == 'x' or self.name(pos3)== 'X':
             result.append(pos3)
             pos3 = self.walk(pos3,2)
-        while self.name(pos4) == '0':
+        while self.name(pos4) == '0' or self.name(pos4) == 'x' or self.name(pos4) == 'X':
             result.append(pos4)
             pos4 = self.walk(pos4,3)
         if (self.colour(pos1) * clr) == 2: attack.append(pos1)
@@ -292,16 +292,16 @@ class board:
         pos2 = self.walk(t1, 3) 
         pos3 = self.walk(t2, 2)
         pos4 = self.walk(t2, 3)
-        while self.name(pos1) == '0':
+        while self.name(pos1) == '0' or self.name(pos1) == 'x' or self.name(pos1) == 'X':
             result.append(pos1)
             pos1 = self.walk(self.walk(pos1,0),2)
-        while self.name(pos2) == '0':
+        while self.name(pos2) == '0' or self.name(pos2) == 'x' or self.name(pos2) == 'X':
             result.append(pos2)
             pos2 = self.walk(self.walk(pos2,0),3)
-        while self.name(pos3) == '0':
+        while self.name(pos3) == '0' or self.name(pos3) == 'x' or self.name(pos3) == 'X':
             result.append(pos3)
             pos3 = self.walk(self.walk(pos3,1),2)
-        while self.name(pos4) == '0':
+        while self.name(pos4) == '0' or self.name(pos4) == 'x' or self.name(pos4) == 'X':
             result.append(pos4)
             pos4 = self.walk(self.walk(pos4,1),3)
         if (self.colour(pos1) * clr) == 2: attack.append(pos1)
