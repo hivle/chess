@@ -13,7 +13,6 @@ def load_images(path_to_directory):
     return image_dict
 
 
-
 class play:
     new = board()
     size = 600
