@@ -6,11 +6,11 @@ def char_range(c1, c2):
 
 # Lowercase for Black pieces, uppercase for White, 'N' is for knight
 class board:
+    white_castle = True
+    black_castle = True
+    white_castle_long = True
+    black_castle_long = True
     def __init__(self):
-        self.white_castle = True
-        self.black_castle = True
-        self.white_castle_long = True
-        self.black_castle_long = True
 
         # Stops infinite recursion while calculating can king castle
         self.recur = True
@@ -46,6 +46,10 @@ class board:
             print('') # prints new line after each row
         print('  ---------------------------------\n    a   b   c   d   e   f   g   h')
 
+    
+    def isEnemy(self, p1: str, p2: str) -> bool:
+        return self.colour(p1) + self.colour(p2) == 3
+
     # Returns position of square name in state, for example chessPos('a1') returns 7, 0
     def chessPos(self, sq: str) -> tuple[int, int]:
         row = ord('8') - ord(sq[1])
@@ -73,14 +77,15 @@ class board:
 
     # assumes valid moves only, initial and target are between 'a1' to 'h8'
     def move(self, initial: str, target: str):
+
+        # for backtracking moves
         self.previousstate = self.state
+
+        # if taking a pieces, state cannot repeat thus clearing previous stored states
+        if self.isEnemy(initial, target): self.history.clear(); self.repeatedstate = 0
 
         colini = self.colour(initial)
         coltar = self.colour(target)
-
-        if colini * coltar == 2:
-            self.history.clear()
-            self.repeatedstate = 0
 
         # en passant, enables when starting pawn moves 2 squares
         enp = False
@@ -89,10 +94,11 @@ class board:
         cas = False
 
         if self.name(target) != 'x' and self.name(target) != 'X':
-            for i, row in enumerate(self.state):
-                for j, col in enumerate(row):
-                    if col == 'x' or col == 'X':
-                        self.state[i][j] = '0'
+            for row in range(8):
+                for col in range(8):
+                    a = self.state[row][col]
+                    if a == 'x' or a == 'X':
+                        self.state[row][col] = '0'
 
         if self.name(initial) == 'P' or self.name(initial) == 'p':
             self.history.clear()
@@ -144,9 +150,9 @@ class board:
         # When rook is moved that colour can no longer castle that side
         # when king is moved that colour can no longer castle at all
         if initial == 'h1' or initial == 'e1': self.white_castle = False
-        elif initial == 'a1' or initial == 'e1': self.white_castle_long = False
-        elif initial == 'h8' or initial == 'e8': self.black_castle = False
-        elif initial == 'a8' or initial == 'e8': self.black_castle_long = False
+        if initial == 'a1' or initial == 'e1': self.white_castle_long = False
+        if initial == 'h8' or initial == 'e8': self.black_castle = False
+        if initial == 'a8' or initial == 'e8': self.black_castle_long = False
         
         tempmax = 0
         for i in self.history:
@@ -281,7 +287,7 @@ class board:
         result = []
         attack = []
         t1 = self.walk(target, 0)
-        t2 = self.walk(target, 1) 
+        t2 = self.walk(target, 1)
         pos1 = self.walk(t1, 2)
         pos2 = self.walk(t1, 3) 
         pos3 = self.walk(t2, 2)
@@ -357,15 +363,13 @@ class board:
         rightright = self.walk(right, 3)
 
         if self.recur:
+            self.recur = False
+            dan = self.danger(clr == 1)
             if (self.white_castle and clr == 1) or (self.black_castle_long and clr == 2):
-                self.recur = False
-                dan = self.danger(clr == 1)
-                if self.colour(right) == 0 and (not self.colour(rightright) == (3 - clr)) and (rightright not in dan) and (right not in dan) and (target not in dan):
+                if self.colour(right) == 0 and self.colour(rightright) == 0 and (rightright not in dan) and (right not in dan) and (target not in dan):
                     possible.append(self.walk(right,3))
             if (self.white_castle_long and clr == 1) or (self.black_castle and clr == 2):
-                self.recur = False
-                dan = self.danger(clr == 1)
-                if self.colour(left) == 0 and (not self.colour(leftleft) == (3 - clr)) and (leftleft not in dan) and (left not in dan) and (target not in dan):
+                if self.colour(left) == 0 and self.colour(leftleft) == 0 and (leftleft not in dan) and (left not in dan) and (target not in dan):
                     possible.append(self.walk(left,2))
             self.recur = True
             
@@ -374,7 +378,7 @@ class board:
             if (i != '00'):
                 if (self.colour(i) == 0):
                     result.append(i)
-                elif (self.colour(i) * clr == 2):
+                elif (self.isEnemy(target, i)):
                     attack.append(i)
 
         return result, attack
@@ -383,7 +387,6 @@ class board:
     def legal(self, target: str) -> tuple[list[str], list[str]]:
         piece = self.name(target)
         clr = self.colour(target)
-        #if self.inCheck(clr == 1) and piece != 'k' and piece != 'K': return []
         result = []
         attack = []
         match piece:
@@ -414,6 +417,7 @@ class board:
                 result, attack = self.knightHelper(target)
             case 'K' | 'k':
                 result, attack = self.kingHelper(target)
+
         return result, attack
 
     def isSafe(self, side: bool, target: str) -> bool:
