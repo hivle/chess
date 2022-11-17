@@ -103,6 +103,7 @@ class board:
         if self.name(initial) == 'P' or self.name(initial) == 'p':
             self.history.clear()
             self.repeatedstate = 0
+
             pos1 = self.walk(initial, colini - 1) # 1 sqaure front of target
             pos2 = self.walk(pos1, colini - 1)   # 2 squares front of target
 
@@ -146,6 +147,13 @@ class board:
                 if colini == 2:
                     self.setval(rookt, 'r')
                     self.setval(rooki, '0')
+            
+            # automatically promote to queen
+            for i in range(8):
+                if self.state[0][i] == 'P':
+                    self.state[0][i] = 'Q'
+                if self.state[7][i] == 'p':
+                    self.state[7][i] = 'q'
         
         # When rook is moved that colour can no longer castle that side
         # when king is moved that colour can no longer castle at all
@@ -436,4 +444,4 @@ class board:
         bad = list(set(bad))
         return bad
 
-## TODO: Pawn promition, add menu, add backtracks
+## TODO: add menu, add backtracks, stay on the same square after moving when flipping sides
