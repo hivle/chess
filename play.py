@@ -37,6 +37,7 @@ class play:
     chesspieces = load_images('style/pixle')
 
     def __init__(self, side: bool = True, size: int = 600):
+        side = side * self.turn
         self.size = (size // 8) * 8
         self.square = size//8
         self.pieceSize = size//10
@@ -54,8 +55,10 @@ class play:
         else: print("balck won") 
 
     # determine select and selcect move
-    def select(self, side: bool = True):
-
+    def select(self, side: bool = True, autoflip: bool = False):
+        if autoflip: 
+            if side: side = self.turn
+            else: side = not self.turn
         # mark king if it's in check
         if self.new.inCheck(True):
             x,y = self.new.chessPos(self.new.locateKing(True))
@@ -135,7 +138,10 @@ class play:
                 else:
                     draw.rect(self.screen,self.white,(i*self.square,j*self.square,self.square, self.square))
 
-    def draw_board(self, side: bool = True):
+    def draw_board(self, side: bool = True, autoflip: bool = False):
+        if autoflip: 
+            if side: side = self.turn
+            else: side = not self.turn
         self.draw_base(side)
         b = self.new.state
         for i, r in enumerate(b):
@@ -170,15 +176,17 @@ class play:
         
 
 def main():
+    #starting side
     side = True
+    flip = False
     g1 = play(side)
     run=True
     while run:
         for e in event.get():       
             if e.type == QUIT:      
                 run=False
-        g1.draw_board(side)
-        g1.select(side)
+        g1.draw_board(side, flip)
+        g1.select(side, flip)
         if g1.new.isDraw(side):
             g1.gameOver(side, True)
             run = False
