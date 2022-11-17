@@ -61,11 +61,11 @@ class play:
             else: side = not self.turn
         # mark king if it's in check
         if self.new.inCheck(True):
-            x,y = self.new.chessPos(self.new.locateKing(True))
+            x,y = self.new.listPos(self.new.locateKing(True))
             if not side: x, y = 7-x, 7-y
             draw.rect(self.screen, self.red, (y*self.square, x*self.square, self.square, self.square), self.square//16)
         elif self.new.inCheck(False):
-            x,y = self.new.chessPos(self.new.locateKing(False))
+            x,y = self.new.listPos(self.new.locateKing(False))
             if not side: x, y = 7-x, 7-y
             draw.rect(self.screen, self.red, (y*self.square, x*self.square, self.square, self.square), self.square//16)
 
@@ -88,15 +88,15 @@ class play:
 
             if (self.isSelected):
                 for i in self.tempattack + self.tempresult:
-                    if side: m = self.new.listPos(self.selected[1]//self.square,self.selected[0]//self.square)
-                    else: m = self.new.listPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square)
-                    if (self.new.listPos(sy,sx) == i) and self.new.moveTest(m,i):
+                    if side: m = self.new.chessPos(self.selected[1]//self.square,self.selected[0]//self.square)
+                    else: m = self.new.chessPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square)
+                    if (self.new.chessPos(sy,sx) == i) and self.new.moveTest(m,i):
                         self.new.move(m,i)
                         self.turn = not self.turn
                     self.isSelected = False
                         
-            if (self.turn and (self.new.colour(self.new.listPos(sy,sx)) == 1)) or (not self.turn and (self.new.colour(self.new.listPos(sy,sx)) == 2)):
-                self.tempresult, self.tempattack = self.new.legal(self.new.listPos(sy,sx))
+            if (self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 1)) or (not self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 2)):
+                self.tempresult, self.tempattack = self.new.legal(self.new.chessPos(sy,sx))
             else:
                 self.tempresult, self.tempattack = [],[]
 
@@ -109,12 +109,12 @@ class play:
         if (self.isSelected):
             draw.rect(self.screen, self.green, (sx, sy, self.square, self.square), self.square//16)
             for i in self.tempresult:
-                tempx, tempy = self.new.chessPos(i)
+                tempx, tempy = self.new.listPos(i)
                 if side: tempx, tempy = tempx * self.square, tempy * self.square
                 else: tempx, tempy = self.size - tempx * self.square - self.square, self.size - tempy * self.square - self.square
                 draw.circle(self.screen, self.green, (tempy + self.square//2, tempx + self.square//2), self.square//7)
             for i in self.tempattack:
-                tempx, tempy = self.new.chessPos(i)
+                tempx, tempy = self.new.listPos(i)
                 if side: tempx, tempy = tempx * self.square, tempy * self.square
                 else: tempx, tempy = self.size - tempx * self.square - self.square, self.size - tempy * self.square - self.square
                 # attackable unit
