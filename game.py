@@ -64,9 +64,10 @@ class board:
     def colour(self, sq: str) -> int:
         row, col = self.chessPos(sq)
         if row > 7 or row < 0 or col < 0 or col > 7:
-            return 0
+            return 3
         val = self.name(sq)
-        if val == '0' or val == 'x' or val == 'X':      return 0
+        if val == '0' or val == 'X':
+            return 0
         elif val.isupper(): return 1
         else:               return 2
 
@@ -76,91 +77,61 @@ class board:
         self.state[x][y] = new
 
     # assumes valid moves only, initial and target are between 'a1' to 'h8'
-    def move(self, initial: str, target: str):
+    def move(self, start: str, target: str):
 
         # for backtracking moves
         self.previousstate = self.state
 
         # if taking a pieces, state cannot repeat thus clearing previous stored states
-        if self.isEnemy(initial, target): self.history.clear(); self.repeatedstate = 0
+        if self.isEnemy(start, target): self.history.clear(); self.repeatedstate = 0
 
-        colini = self.colour(initial)
-        coltar = self.colour(target)
+        # Removes en passant mark
+        for i in range(8):
+            if self.state[2][i] == 'X': self.state[2][i] = '0'
+            if self.state[5][i] == 'X': self.state[5][i] = '0'
 
-        # en passant, enables when starting pawn moves 2 squares
-        enp = False
-
-        # Castle
-        cas = False
-
-        if self.name(target) != 'x' and self.name(target) != 'X':
-            for row in range(8):
-                for col in range(8):
-                    a = self.state[row][col]
-                    if a == 'x' or a == 'X':
-                        self.state[row][col] = '0'
-
-        if self.name(initial) == 'P' or self.name(initial) == 'p':
+        if self.name(start) == 'P' or self.name(start) == 'p':
+            # Pawn is moved reset 50 move rule
             self.history.clear()
             self.repeatedstate = 0
 
-            pos1 = self.walk(initial, colini - 1) # 1 sqaure front of target
-            pos2 = self.walk(pos1, colini - 1)   # 2 squares front of target
+            # When the Pawn moves two square forward, mark the first square to enable En Passant on the next move
+            moveOne = self.walk(start, 0, self.colour(start) == 1)
+            moveTwo = self.walk(moveOne, 0, self.colour(start) == 1)
+            if target == moveTwo:  self.setval(moveOne, 'X')
 
-            if (self.name(target) == 'x' or self.name(target) == 'X'):
-                
-                if coltar == 1: pos3 = self.walk(target, 0)
-                elif coltar == 2: pos3 = self.walk(target,1)
-
-                self.setval(pos3, '0')
-    
-            result = self.legal(initial)[0]
-            if (pos2 in result) and (target == pos2):
-                enp = True
-
-        elif self.name(initial) == 'K':
+        elif self.name(start) == 'K':
             if self.white_castle and target == 'g1':
-                rooki, rookt = 'h1', 'f1'
-                cas = True
+                self.setval('f1', 'R')
+                self.setval('h1', '0')
             elif self.white_castle_long and target == 'c1':
-                rooki, rookt = 'a1', 'd1'
-                cas = True
+                self.setval('d1', 'R')
+                self.setval('a1', '0')
 
-        elif self.name(initial) == 'k':
+        elif self.name(start) == 'k':
             if self.black_castle and target == 'g8':
-                rooki, rookt = 'h8', 'f8'
-                cas = True
+                self.setval('f8', 'R')
+                self.setval('h8', '0')
             elif self.black_castle_long and target == 'c8':
-                rooki, rookt = 'a8', 'd8'
-                cas = True
+                self.setval('d8', 'R')
+                self.setval('a8', '0')
 
-        if (not (colini == coltar) and not(colini == 0)):
-            self.setval(target, self.name(initial))
-            self.setval(initial, '0')
-            if enp:
-                if colini == 1: self.setval(pos1, 'X')
-                elif colini == 2: self.setval(pos1, 'x')
-            if cas:
-                if colini == 1:
-                    self.setval(rookt, 'R')
-                    self.setval(rooki, '0')
-                if colini == 2:
-                    self.setval(rookt, 'r')
-                    self.setval(rooki, '0')
+        self.setval(target, self.name(start))
+        self.setval(start, '0')
             
-            # automatically promote to queen
-            for i in range(8):
-                if self.state[0][i] == 'P':
-                    self.state[0][i] = 'Q'
-                if self.state[7][i] == 'p':
-                    self.state[7][i] = 'q'
+        # automatically promote to queen
+        for i in range(8):
+            if self.state[0][i] == 'P':
+                self.state[0][i] = 'Q'
+            if self.state[7][i] == 'p':
+                self.state[7][i] = 'q'
         
         # When rook is moved that colour can no longer castle that side
         # when king is moved that colour can no longer castle at all
-        if initial == 'h1' or initial == 'e1': self.white_castle = False
-        if initial == 'a1' or initial == 'e1': self.white_castle_long = False
-        if initial == 'h8' or initial == 'e8': self.black_castle = False
-        if initial == 'a8' or initial == 'e8': self.black_castle_long = False
+        if start == 'h1' or start == 'e1': self.white_castle = False
+        if start == 'a1' or start == 'e1': self.white_castle_long = False
+        if start == 'h8' or start == 'e8': self.black_castle = False
+        if start == 'a8' or start == 'e8': self.black_castle_long = False
         
         tempmax = 0
         for i in self.history:
@@ -179,28 +150,32 @@ class board:
         self.history.append(newstate)
 
 
-    # 0 for up, 1 for down, 2 for left, 3 for right
-    # returns pos of next piece, returns '00' if hitting wall
-    def walk(self, target: str, dir: int) -> str:
-        if not (('a' <= target[0] <= 'h') and ('1' <= target[1] <= '8')):
-            return '00'
+    # 0 for forward, 1 for backward, 2 for left, 3 for right, from the pieces prespective
+    # returns pos of piece in chosen dir, returns '00' if hitting wall
+    def walk(self, target: str, direction: int, isForward: bool = True) -> str:
+
+        if not isForward:
+            if direction == 1 or direction == 0: direction = 1 - direction
+            else: direction = 5 - direction
+
         a = target[0]
         b = target[1]
-        match dir:
+
+        match direction:
             case 0: b = chr(ord(b) + 1)
             case 1: b = chr(ord(b) - 1)
             case 2: a = chr(ord(a) - 1)
             case 3: a = chr(ord(a) + 1)
-        if (('a' <= a <= 'h') and ('1' <= b <= '8')):
+
+        if ('a' <= a <= 'h') and ('1' <= b <= '8'):
             return a + b
-        else:
-            return '00'
+        else:   return '00'
 
     # returns true if safe else false
-    def moveTest(self, initial: str, target: str) -> bool:
+    def moveTest(self, start: str, target: str) -> bool:
         temp = deepcopy(self)
-        temp.move(initial, target)
-        return not temp.inCheck(self.colour(initial) == 1)
+        temp.move(start, target)
+        return not temp.inCheck(self.colour(start) == 1)
         
 
     def name(self, target: str) -> str:
@@ -265,33 +240,31 @@ class board:
         return not c
 
     def rookHelper(self, target: str) -> tuple[list[str], list[str]]:
-        clr = self.colour(target)
         attack = []
         result = []
         pos1 = self.walk(target, 0)
         pos2 = self.walk(target, 1) 
         pos3 = self.walk(target, 2)
         pos4 = self.walk(target, 3)
-        while self.name(pos1) == '0' or self.name(pos1) == 'x' or self.name(pos1) == 'X':
+        while self.colour(pos1) == 0:
             result.append(pos1)
             pos1 = self.walk(pos1,0)
-        while self.name(pos2) == '0' or self.name(pos2) == 'x' or self.name(pos2) == 'X':
+        while self.colour(pos2) == 0:
             result.append(pos2)
             pos2 = self.walk(pos2,1)
-        while self.name(pos3) == '0' or self.name(pos3) == 'x' or self.name(pos3)== 'X':
+        while self.colour(pos3) == 0:
             result.append(pos3)
             pos3 = self.walk(pos3,2)
-        while self.name(pos4) == '0' or self.name(pos4) == 'x' or self.name(pos4) == 'X':
+        while self.colour(pos4) == 0:
             result.append(pos4)
             pos4 = self.walk(pos4,3)
-        if (self.colour(pos1) * clr) == 2: attack.append(pos1)
-        if (self.colour(pos2) * clr) == 2: attack.append(pos2)
-        if (self.colour(pos3) * clr) == 2: attack.append(pos3)
-        if (self.colour(pos4) * clr) == 2: attack.append(pos4)
+        if self.isEnemy(pos1, target): attack.append(pos1)
+        if self.isEnemy(pos2, target): attack.append(pos2)
+        if self.isEnemy(pos3, target): attack.append(pos3)
+        if self.isEnemy(pos4, target): attack.append(pos4)
         return result, attack
 
     def bishopHelper(self, target: str) -> tuple[list[str],list[str]]:
-        clr = self.colour(target)
         result = []
         attack = []
         t1 = self.walk(target, 0)
@@ -300,26 +273,25 @@ class board:
         pos2 = self.walk(t1, 3) 
         pos3 = self.walk(t2, 2)
         pos4 = self.walk(t2, 3)
-        while self.name(pos1) == '0' or self.name(pos1) == 'x' or self.name(pos1) == 'X':
+        while self.colour(pos1) == 0:
             result.append(pos1)
             pos1 = self.walk(self.walk(pos1,0),2)
-        while self.name(pos2) == '0' or self.name(pos2) == 'x' or self.name(pos2) == 'X':
+        while self.colour(pos2) == 0:
             result.append(pos2)
             pos2 = self.walk(self.walk(pos2,0),3)
-        while self.name(pos3) == '0' or self.name(pos3) == 'x' or self.name(pos3) == 'X':
+        while self.colour(pos3) == 0:
             result.append(pos3)
             pos3 = self.walk(self.walk(pos3,1),2)
-        while self.name(pos4) == '0' or self.name(pos4) == 'x' or self.name(pos4) == 'X':
+        while self.colour(pos4) == 0:
             result.append(pos4)
             pos4 = self.walk(self.walk(pos4,1),3)
-        if (self.colour(pos1) * clr) == 2: attack.append(pos1)
-        if (self.colour(pos2) * clr) == 2: attack.append(pos2)
-        if (self.colour(pos3) * clr) == 2: attack.append(pos3)
-        if (self.colour(pos4) * clr) == 2: attack.append(pos4)
+        if self.isEnemy(pos1, target): attack.append(pos1)
+        if self.isEnemy(pos2, target): attack.append(pos2)
+        if self.isEnemy(pos3, target): attack.append(pos3)
+        if self.isEnemy(pos4, target): attack.append(pos4)
         return result, attack
 
-    def knightHelper(self, target: str):
-        clr = self.colour(target)
+    def knightHelper(self, target: str) -> tuple[list[str], list[str]]:
         possible = []
         result = []
         attack = []
@@ -340,11 +312,11 @@ class board:
             if (i != '00'):
                 if (self.colour(i) == 0):
                     result.append(i)
-                elif (self.colour(i) * clr == 2):
+                elif self.isEnemy(i, target):
                     attack.append(i)
         return result, attack
 
-    def kingHelper(self, target: str):
+    def kingHelper(self, target: str) -> tuple[list[str], list[str]]:
         clr = self.colour(target)
         possible = []
         result = []
@@ -380,7 +352,6 @@ class board:
                 if self.colour(left) == 0 and self.colour(leftleft) == 0 and (leftleft not in dan) and (left not in dan) and (target not in dan):
                     possible.append(self.walk(left,2))
             self.recur = True
-            
 
         for i in possible:
             if (i != '00'):
@@ -391,27 +362,30 @@ class board:
 
         return result, attack
 
+    def pawnHelper(self, target: str) -> tuple[list[str], list[str]]:
+        result = []
+        attack = []
+        side = self.colour(target) == 1
+        pos1 = self.walk(target, 0, side) # 1 sqaure front of target
+        pos2 = self.walk(pos1, 0, side)   # 2 squares front of target
+        pos3 = self.walk(pos1, 2)
+        pos4 = self.walk(pos1, 3)
+        if self.name(pos1) == '0':
+            result.append(pos1)
+            if self.name(pos2) == '0':
+                # When white pawn is on 7th row or black pawn is on 2nd row, they can move two squares
+                if (target[1] == '2'  and self.name(target) == 'P') or (target[1] == '7' and self.name(target) == 'p'):
+                    result.append(pos2)
+        if self.isEnemy(pos3, target) or self.name(pos3) == 'X': attack.append(pos3)
+        if self.isEnemy(pos4,target) or self.name(pos4) == 'X': attack.append(pos4)
+        return result, attack
+
     # Input a position of a piece and return two list of all posible position
     def legal(self, target: str) -> tuple[list[str], list[str]]:
         piece = self.name(target)
-        clr = self.colour(target)
-        result = []
-        attack = []
         match piece:
             case 'P' | 'p':
-                pos1 = self.walk(target, clr - 1) # 1 sqaure front of target
-                pos2 = self.walk(pos1, clr - 1)   # 2 squares front of target
-                pos3 = self.walk(pos1, 2)
-                pos4 = self.walk(pos1, 3)
-                if self.name(pos1) == '0':
-                    result.append(pos1)
-                    if(self.name(pos2) == '0'):
-                        # When white pawn is on 7th row or black pawn is on 2nd row, they can move two squares
-                        if (target[1] == '2'  and piece == 'P') or (target[1] == '7' and piece == 'p'):
-                            result.append(pos2)
-                if (self.colour(pos3) * clr) == 2: attack.append(pos3)
-                if (self.colour(pos4) * clr) == 2: attack.append(pos4)
-                return result, attack
+                result, attack = self.pawnHelper(target)
             case 'R' | 'r':
                 result, attack = self.rookHelper(target)
             case 'B' | 'b':
