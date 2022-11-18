@@ -90,9 +90,10 @@ class play:
                 for i in self.tempattack + self.tempresult:
                     if side: m = self.new.chessPos(self.selected[1]//self.square,self.selected[0]//self.square)
                     else: m = self.new.chessPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square)
-                    if (self.new.chessPos(sy,sx) == i) and self.new.moveTest(m,i):
-                        self.new.move(m,i)
+                    if self.new.chessPos(sy,sx) == i and self.new.move(m,i):
                         self.turn = not self.turn
+                        print(self.new)
+                        self.new.printer()
                     self.isSelected = False
                         
             if (self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 1)) or (not self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 2)):
