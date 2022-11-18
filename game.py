@@ -1,5 +1,5 @@
 from copy import deepcopy
-
+from itertools import permutations, product
 def char_range(c1, c2):
     for c in range(ord(c1), ord(c2)+1):
         yield chr(c)
@@ -71,16 +71,17 @@ class board:
     def chessPos(self, row: int, col: int) -> str:
         return chr(ord('a') + col) + chr(ord('8') - row)
     
-    # returns 0 for empty, 1 for white, 2 for black
+    # returns 0 for empty, 1 for white, 2 for black, 3 for out of range
     def colour(self, sq: str) -> int:
-        row, col = self.listPos(sq)
-        if row > 7 or row < 0 or col < 0 or col > 7:
-            return 3
         val = self.name(sq)
-        if val == '0' or val == 'X':
+        if val in self.whitePieces:
+            return 1
+        elif val in self.blackPieces:
+            return 2
+        elif val == '0' or val == 'X':
             return 0
-        elif val.isupper(): return 1
-        else:               return 2
+        elif val == 'W':
+            return 3
 
     # enter square name, changes the value to new, assumes valid input
     def setValue(self, tar: str, new: str):
@@ -107,9 +108,9 @@ class board:
             self.repeatedMoves = 0
 
             # When the Pawn moves two square forward, mark the first square to enable En Passant on the next move
-            moveOne = self.look(start, 0, self.colour(start) == 1)
-            moveTwo = self.look(moveOne, 0, self.colour(start) == 1)
-            if target == moveTwo:  self.setValue(moveOne, 'X')
+            one = self.look(start, (0,1), self.colour(start) == 1)
+            two = self.look(one, (0,1), self.colour(start) == 1)
+            if target == two:  self.setValue(one, 'X')
 
         elif self.name(start) == 'K':
             if self.whiteCastle and target == 'g1':
@@ -162,23 +163,19 @@ class board:
 
 
     # returns pos of piece in chosen dir, returns '00' if hitting wall
-    def look(self, target: str, direction: int, forward: bool = True) -> str:
+    def look(self, target: str, direction: tuple[int, int], forward: bool = True) -> str:
 
         if not forward:
-            if direction == 1 or direction == 0: direction = 1 - direction
-            else: direction = 5 - direction
+            direction = (-direction[0], -direction [1])
 
-        a = target[0]
-        b = target[1]
+        letter = target[0]
+        number = target[1]
 
-        match direction:
-            case 0: b = chr(ord(b) + 1)
-            case 1: b = chr(ord(b) - 1)
-            case 2: a = chr(ord(a) - 1)
-            case 3: a = chr(ord(a) + 1)
+        letter = chr(ord(letter) + direction[0])
+        number = chr(ord(number) + direction [1])
 
-        if ('a' <= a <= 'h') and ('1' <= b <= '8'):
-            return a + b
+        if ('a' <= letter <= 'h') and ('1' <= number <= '8'):
+            return letter + number
         else:   return '00'
 
     # returns true if safe else false
@@ -250,125 +247,70 @@ class board:
         return not c
 
     def rookHelper(self, target: str) -> tuple[list[str], list[str]]:
-        attack = []
         result = []
-        pos1 = self.look(target, 0)
-        pos2 = self.look(target, 1) 
-        pos3 = self.look(target, 2)
-        pos4 = self.look(target, 3)
-        while self.colour(pos1) == 0:
-            result.append(pos1)
-            pos1 = self.look(pos1,0)
-        while self.colour(pos2) == 0:
-            result.append(pos2)
-            pos2 = self.look(pos2,1)
-        while self.colour(pos3) == 0:
-            result.append(pos3)
-            pos3 = self.look(pos3,2)
-        while self.colour(pos4) == 0:
-            result.append(pos4)
-            pos4 = self.look(pos4,3)
-        if self.isEnemy(pos1, target): attack.append(pos1)
-        if self.isEnemy(pos2, target): attack.append(pos2)
-        if self.isEnemy(pos3, target): attack.append(pos3)
-        if self.isEnemy(pos4, target): attack.append(pos4)
+        attack = []
+        for direction in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
+            current = self.look(target, direction)
+            while self.colour(current) == 0:
+                result.append(current)
+                current = self.look(current, direction)
+            if self.isEnemy(current, target): attack.append(current)
         return result, attack
 
     def bishopHelper(self, target: str) -> tuple[list[str],list[str]]:
         result = []
         attack = []
-        t1 = self.look(target, 0)
-        t2 = self.look(target, 1)
-        pos1 = self.look(t1, 2)
-        pos2 = self.look(t1, 3) 
-        pos3 = self.look(t2, 2)
-        pos4 = self.look(t2, 3)
-        while self.colour(pos1) == 0:
-            result.append(pos1)
-            pos1 = self.look(self.look(pos1,0),2)
-        while self.colour(pos2) == 0:
-            result.append(pos2)
-            pos2 = self.look(self.look(pos2,0),3)
-        while self.colour(pos3) == 0:
-            result.append(pos3)
-            pos3 = self.look(self.look(pos3,1),2)
-        while self.colour(pos4) == 0:
-            result.append(pos4)
-            pos4 = self.look(self.look(pos4,1),3)
-        if self.isEnemy(pos1, target): attack.append(pos1)
-        if self.isEnemy(pos2, target): attack.append(pos2)
-        if self.isEnemy(pos3, target): attack.append(pos3)
-        if self.isEnemy(pos4, target): attack.append(pos4)
+        for direction in [(1, 1), (-1, -1), (-1, 1), (1, -1)]:
+            current = self.look(target, direction)
+            while self.colour(current) == 0:
+                result.append(current)
+                current = self.look(current, direction)
+            if self.isEnemy(current, target): attack.append(current)
         return result, attack
 
     def knightHelper(self, target: str) -> tuple[list[str], list[str]]:
-        possible = []
         result = []
         attack = []
-        t1 = self.look(target, 0)
-        t2 = self.look(target, 1)
-        t3 = self.look(target, 2)
-        t4 = self.look(target, 3)
-        possible.append(self.look(self.look(t1, 2), 2))
-        possible.append(self.look(self.look(t1, 3), 3))
-        possible.append(self.look(self.look(t2, 2), 2))
-        possible.append(self.look(self.look(t2, 3), 3))
-        possible.append(self.look(self.look(t3, 1), 1))
-        possible.append(self.look(self.look(t3, 0), 0))
-        possible.append(self.look(self.look(t4, 0), 0))
-        possible.append(self.look(self.look(t4, 1), 1))
-
-        for i in possible:
-            if (i != '00'):
-                if (self.colour(i) == 0):
-                    result.append(i)
-                elif self.isEnemy(i, target):
-                    attack.append(i)
+        for direction in permutations([-1,1,-2,2],2):
+            if abs(direction[0]) != abs(direction[1]):
+                move = self.look(target, direction)
+                if (move != '00'):
+                    if (self.colour(move) == 0):
+                        result.append(move)
+                    elif self.isEnemy(move, target):
+                        attack.append(move)
         return result, attack
 
     def kingHelper(self, target: str) -> tuple[list[str], list[str]]:
         clr = self.colour(target)
-        possible = []
         result = []
         attack = []
-        up = self.look(target,0)
-        down = self.look(target,1)
-        left = self.look(target,2)
-        right = self.look(target,3)
-        upleft = self.look(up, 2)
-        upright = self.look(up, 3)
-        downleft = self.look(down,2)
-        downright = self.look(down,3)
-        possible.append(up)
-        possible.append(down)
-        possible.append(left)
-        possible.append(right)
-        possible.append(upleft)
-        possible.append(upright) 
-        possible.append(downleft)
-        possible.append(downright)
 
         # Castle check
-        leftleft = self.look(left, 2)
-        rightright = self.look(right, 3)
+        left = self.look(target,(-1,0), clr == 1)
+        right = self.look(target,(1,0), clr == 1)
+        leftleft = self.look(target, (-2,0), clr == 1)
+        rightright = self.look(target, (2,0),clr == 1)
 
         if self.recur:
             self.recur = False
             dan = self.danger(clr == 1)
             if (self.whiteCastle and clr == 1) or (self.blackCastleLong and clr == 2):
                 if self.colour(right) == 0 and self.colour(rightright) == 0 and (rightright not in dan) and (right not in dan) and (target not in dan):
-                    possible.append(self.look(right,3))
+                    result.append(rightright)
             if (self.whiteCastleLong and clr == 1) or (self.blackCastle and clr == 2):
                 if self.colour(left) == 0 and self.colour(leftleft) == 0 and (leftleft not in dan) and (left not in dan) and (target not in dan):
-                    possible.append(self.look(left,2))
+                    result.append(leftleft)
             self.recur = True
 
-        for i in possible:
-            if (i != '00'):
-                if (self.colour(i) == 0):
-                    result.append(i)
-                elif (self.isEnemy(target, i)):
-                    attack.append(i)
+        for direction in (list(product([1,-1,0],[1,-1,0]))):
+            if direction != (0,0):
+                move = self.look(target, direction)
+                if (move != '00'):
+                    if (self.colour(move) == 0):
+                        result.append(move)
+                    elif self.isEnemy(move, target):
+                        attack.append(move)
 
         return result, attack
 
@@ -376,10 +318,10 @@ class board:
         result = []
         attack = []
         side = self.colour(target) == 1
-        pos1 = self.look(target, 0, side) # 1 sqaure front of target
-        pos2 = self.look(pos1, 0, side)   # 2 squares front of target
-        pos3 = self.look(pos1, 2)
-        pos4 = self.look(pos1, 3)
+        pos1 = self.look(target, (0,1), side) # 1 sqaure front of target
+        pos2 = self.look(pos1, (0,1), side)   # 2 squares front of target
+        pos3 = self.look(target, (1,1), side)
+        pos4 = self.look(target, (-1,1), side)
         if self.name(pos1) == '0':
             result.append(pos1)
             if self.name(pos2) == '0':
@@ -416,15 +358,16 @@ class board:
         return (target in self.danger(side))
 
     def danger(self, side: bool) -> list[str]:
-        if side:    clr = 1
-        else:       clr = 2
         bad = []
+        enemyColour = 1
+        if side: enemyColour = 2
         for i in char_range('a','h'):
             for j in char_range('1','8'):
                 k = i + j
-                if (clr * self.colour(k) == 2):
+                if self.colour(k) == enemyColour:
                     result, attack = self.legal(k)
-                    bad = bad + attack + result
-        return attack + result
+                    bad = bad + result + attack
+        list(set(bad))
+        return bad
 
 ## TODO: add menu, add backtracks, stay on the same square after moving when flipping sides
