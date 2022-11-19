@@ -1,4 +1,5 @@
 from copy import deepcopy
+from stack import Stack
 from itertools import permutations, product
 
 
@@ -7,7 +8,7 @@ def _charRange(c1, c2):
         yield chr(c)
 
 # Lowercase for Black pieces, uppercase for White, 'N' is for knight
-class board:
+class Board:
     def __init__(self):
 
         self._whitePieces = ['R','N','B','Q','K','P']
@@ -21,6 +22,8 @@ class board:
         self._blackCastleLong = True
 
         self._repeatedMoves = 0
+        self.gameDraw = False
+        self.whiteWin = False
 
         self.state = [
             ['r','n','b','q','k','b','n','r'],
@@ -32,17 +35,11 @@ class board:
             ['P','P','P','P','P','P','P','P'],
             ['R','N','B','Q','K','B','N','R']]
 
-        self.history = []
-        self.previousState = self.state
-    
-    def printer(self):
-        print(self._whiteCastle)
-        print(self._blackCastle)
-        print(self._whiteCastleLong)
-        print(self._blackCastleLong)
+        self.history = Stack()
+        self.history.push("rnbqkbnrpppppppp00000000000000000000000000000000PPPPPPPPRNBQKBNR")
     
     # Side is True for white at bottom, False for black
-    def __repr__(self, side: bool = True):
+    def __str__(self, side: bool = True) -> str:
         order = range(8, 0, -1)
         if not side: order = reversed(order)
         result = ""
@@ -105,11 +102,9 @@ class board:
             if temp.inCheck(isWhite):
                 return False
 
-        # for backtracking moves
-        self.previousState = self.state
-
+        self._repeatedMoves += 1
         # if taking a pieces, state cannot repeat thus clearing previous stored states
-        if self.isEnemy(start, end): self.history.clear(); self._repeatedMoves = 0
+        if self.isEnemy(start, end): self._repeatedMoves = 0
 
         # Removes en passant mark
         for i in range(8):
@@ -118,7 +113,6 @@ class board:
 
         if self.name(start) == 'P' or self.name(start) == 'p':
             # Pawn is moved reset 50 move rule
-            self.history.clear()
             self._repeatedMoves = 0
 
             # When the Pawn moves two square forward, mark the first square to enable En Passant on the next move
@@ -130,7 +124,6 @@ class board:
             if self._whiteCastle and end == 'g1':
                 self.setValue('f1', 'R')
                 self.setValue('h1', '0')
-                print(end)
             elif self._whiteCastleLong and end == 'c1':
                 self.setValue('d1', 'R')
                 self.setValue('a1', '0')
@@ -162,23 +155,27 @@ class board:
         if start == 'h8' or start == 'e8': self._blackCastle = False
         if start == 'a8' or start == 'e8': self._blackCastleLong = False
         
-        tempmax = 0
-        for i in self.history:
-            count = 0
-            for j in self.history:
-                if i == j:
-                    count += 1
-                    tempmax = max(tempmax, count)
-        self._repeatedMoves = max(tempmax, self._repeatedMoves)
         newstate = ""
         for i in self.state:
             tempstate = ""
             for j in i:
                 tempstate = tempstate + j
             newstate = newstate + tempstate
-        self.history.append(newstate)
+        self.history.push(newstate)
+        if self.history.count(newstate) >= 3:
+            self.gameDraw = True
         return True
 
+    def back(self) -> bool:
+        last = self.history.pop()
+        if last is None:
+            return False
+        for i in range(8):
+            for j in range(8):
+                self.state[i][j] = last[i * 8 + j]
+        self.whiteTurn = not self.whiteTurn
+        self._repeatedMoves -= 1
+        return True
 
     # returns pos of piece in chosen dir, returns '00' if hitting wall
     def look(self, target: str, direction: tuple[int, int], forward: bool = True) -> str:
@@ -238,8 +235,8 @@ class board:
 
 
     def isDraw(self, side: bool) -> bool:
-        if len(self.history) >= 50: return True
-        if self._repeatedMoves >= 3: return True
+        if self._repeatedMoves >= 50: return True
+        if self.gameDraw: return True
         side = not side
         c = self.inCheck(side)
         if side:    clr = 1

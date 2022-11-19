@@ -1,5 +1,5 @@
 import os
-from game import board
+from game import Board
 from pygame import *
 #import psutil
 
@@ -14,7 +14,7 @@ def load_images(path_to_directory):
 
 
 class play:
-    new = board()
+    new = Board()
     size = 600
     square = size // 8
     pieceSize = size//10
@@ -73,6 +73,7 @@ class play:
         mb = mouse.get_pressed()
         sx, sy = self.selected
 
+
         if mb[2]:
             self.isSelected = False
             self.selected = (-1,-1)
@@ -92,8 +93,6 @@ class play:
                     else: m = self.new.chessPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square)
                     if self.new.chessPos(sy,sx) == i and self.new.move(m,i):
                         self.turn = not self.turn
-                        print(self.new)
-                        self.new.printer()
                     self.isSelected = False
                         
             if (self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 1)) or (not self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 2)):
@@ -129,6 +128,13 @@ class play:
             self.myhold = my
         else:
             self.mbhold = False
+
+        #simple backtrack
+        if key.get_pressed()[K_SPACE]:
+            self.new.back()
+            self.isSelected = False
+            self.turn = not self.turn
+
 
     def draw_base(self, side: bool = True):
         for i in range(8):
