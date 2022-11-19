@@ -22,6 +22,7 @@ class play:
     mbhold = False
     mxhold = -2
     myhold = -2
+    khold = False
 
     #turn is True for white and False for black
     turn = True
@@ -71,10 +72,17 @@ class play:
 
         mx,my = mouse.get_pos()
         mb = mouse.get_pressed()
+        keys = key.get_pressed()
         sx, sy = self.selected
 
+        if keys[K_SPACE] and not self.khold:
+            if self.new.back():
+                self.turn = not self.turn
+            self.isSelected = False
+        #add casting to backtrack
 
-        if mb[2]:
+
+        elif mb[2]:
             self.isSelected = False
             self.selected = (-1,-1)
 
@@ -130,10 +138,8 @@ class play:
             self.mbhold = False
 
         #simple backtrack
-        if key.get_pressed()[K_SPACE]:
-            self.new.back()
-            self.isSelected = False
-            self.turn = not self.turn
+        keys = key.get_pressed()
+        self.khold = keys[K_SPACE]
 
 
     def draw_base(self, side: bool = True):

@@ -15,7 +15,7 @@ class Board:
         self._blackPieces = ['r','n','b','q','k','p']
 
         self.whiteTurn = True
-
+        #create dictionary here
         self._whiteCastle = True
         self._blackCastle = True
         self._whiteCastleLong = True
@@ -36,7 +36,6 @@ class Board:
             ['R','N','B','Q','K','B','N','R']]
 
         self.history = Stack()
-        self.history.push("rnbqkbnrpppppppp00000000000000000000000000000000PPPPPPPPRNBQKBNR")
     
     # Side is True for white at bottom, False for black
     def __str__(self, side: bool = True) -> str:
@@ -102,6 +101,16 @@ class Board:
             if temp.inCheck(isWhite):
                 return False
 
+        newstate = ""
+        for i in self.state:
+            tempstate = ""
+            for j in i:
+                tempstate = tempstate + j
+            newstate = newstate + tempstate
+        self.history.push(newstate)
+        if self.history.count(newstate) >= 3:
+            self.gameDraw = True
+
         self._repeatedMoves += 1
         # if taking a pieces, state cannot repeat thus clearing previous stored states
         if self.isEnemy(start, end): self._repeatedMoves = 0
@@ -155,15 +164,6 @@ class Board:
         if start == 'h8' or start == 'e8': self._blackCastle = False
         if start == 'a8' or start == 'e8': self._blackCastleLong = False
         
-        newstate = ""
-        for i in self.state:
-            tempstate = ""
-            for j in i:
-                tempstate = tempstate + j
-            newstate = newstate + tempstate
-        self.history.push(newstate)
-        if self.history.count(newstate) >= 3:
-            self.gameDraw = True
         return True
 
     def back(self) -> bool:
