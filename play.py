@@ -72,17 +72,9 @@ class play:
 
         mx,my = mouse.get_pos()
         mb = mouse.get_pressed()
-        keys = key.get_pressed()
         sx, sy = self.selected
 
-        if keys[K_SPACE] and not self.khold:
-            if self.new.back():
-                self.turn = not self.turn
-            self.isSelected = False
-        #add casting to backtrack
-
-
-        elif mb[2]:
+        if mb[2]:
             self.isSelected = False
             self.selected = (-1,-1)
 
@@ -136,11 +128,6 @@ class play:
             self.myhold = my
         else:
             self.mbhold = False
-
-        #simple backtrack
-        keys = key.get_pressed()
-        self.khold = keys[K_SPACE]
-
 
     def draw_base(self, side: bool = True):
         for i in range(8):
@@ -198,6 +185,11 @@ def main():
         for e in event.get():       
             if e.type == QUIT:      
                 run=False
+            elif e.type == KEYDOWN:
+                if e.key == K_SPACE:
+                    if g1.new.back():
+                        g1.turn = not g1.turn
+
         g1.draw_board(side, flip)
         g1.select(side, flip)
         if g1.new.isDraw(side):

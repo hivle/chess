@@ -115,7 +115,11 @@ class Board:
         # if taking a pieces, state cannot repeat thus clearing previous stored states
         if self.isEnemy(start, end): self._repeatedMoves = 0
 
-        # Removes en passant mark
+        # enpassant move
+        if (self.name(start) == 'P' or self.name(start) == 'p') and self.name(end) == 'X':
+                self.setValue(self.look(end,(0,-1),isWhite),'0')
+
+        # Removes en passant mark if didn't take
         for i in range(8):
             if self.state[2][i] == 'X': self.state[2][i] = '0'
             if self.state[5][i] == 'X': self.state[5][i] = '0'
@@ -128,6 +132,7 @@ class Board:
             one = self.look(start, (0,1), isWhite)
             two = self.look(one, (0,1), isWhite)
             if end == two:  self.setValue(one, 'X')
+            
 
         elif self.name(start) == 'K':
             if self._whiteCastle and end == 'g1':
