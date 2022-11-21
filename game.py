@@ -2,7 +2,6 @@ from copy import deepcopy
 from stack import Stack
 from itertools import permutations, product
 
-
 def _charRange(c1, c2):
     for c in range(ord(c1), ord(c2)+1):
         yield chr(c)

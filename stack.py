@@ -40,18 +40,3 @@ class Stack:
                 count += 1
             current = current.next
         return count
-
-def main():
-    empty = Stack()
-    test = Stack()
-    test.push("a")
-    test.push("b")
-    print(test.count("a"))
-    print(empty.count("a"))
-    print(test.count("c"))
-    print(test)
-    print(empty)
-
-
-if __name__ == "__main__":
-    main()
