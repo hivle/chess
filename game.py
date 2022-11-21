@@ -14,18 +14,19 @@ class Board:
         self._whitePieces = ['R','N','B','Q','K','P']
         self._blackPieces = ['r','n','b','q','k','p']
 
-        self.whiteTurn = True
-        #create dictionary here
-        self._whiteCastle = True
-        self._blackCastle = True
-        self._whiteCastleLong = True
-        self._blackCastleLong = True
+        self.state: dict[str, bool | int] = {
+            "whiteTurn": True,
+            "whiteCastle": True,
+            "blackCastle": True,
+            "whiteCastleLong": True,
+            "blackCastleLong": True,
+            "repeatedMoves": 0,
+        }
 
-        self._repeatedMoves = 0
         self.gameDraw = False
         self.whiteWin = False
 
-        self.state = [
+        self.board = [
             ['r','n','b','q','k','b','n','r'],
             ['p','p','p','p','p','p','p','p'],
             ['0','0','0','0','0','0','0','0'],
@@ -36,6 +37,7 @@ class Board:
             ['R','N','B','Q','K','B','N','R']]
 
         self.history = Stack()
+        self.pastStates = Stack()
     
     # Side is True for white at bottom, False for black
     def __str__(self, side: bool = True) -> str:
@@ -44,7 +46,7 @@ class Board:
         result = ""
         for row in order:
             result += f"  ---------------------------------\n" + str(row) + " | "
-            for piece in self.state[8 - row]:
+            for piece in self.board[8 - row]:
                 if piece == '0':
                     result += "  | "
                 else:
@@ -90,7 +92,7 @@ class Board:
     # enter square name, changes the value to new, assumes valid input
     def setValue(self, target: str, new: str):
         x, y = self.listPos(target)
-        self.state[x][y] = new
+        self.board[x][y] = new
 
     # assumes valid moves only, initial and target are between 'a1' to 'h8'
     def move(self, start: str, end: str, test: bool = True) -> bool:
@@ -102,18 +104,19 @@ class Board:
                 return False
 
         newstate = ""
-        for i in self.state:
+        for i in self.board:
             tempstate = ""
             for j in i:
                 tempstate = tempstate + j
             newstate = newstate + tempstate
         self.history.push(newstate)
+        self.pastStates.push(self.state.copy())
         if self.history.count(newstate) >= 3:
             self.gameDraw = True
 
-        self._repeatedMoves += 1
+        self.state["repeatedMoves"] += 1
         # if taking a pieces, state cannot repeat thus clearing previous stored states
-        if self.isEnemy(start, end): self._repeatedMoves = 0
+        if self.isEnemy(start, end): self.state["repeatedMoves"] = 0
 
         # enpassant move
         if (self.name(start) == 'P' or self.name(start) == 'p') and self.name(end) == 'X':
@@ -121,12 +124,12 @@ class Board:
 
         # Removes en passant mark if didn't take
         for i in range(8):
-            if self.state[2][i] == 'X': self.state[2][i] = '0'
-            if self.state[5][i] == 'X': self.state[5][i] = '0'
+            if self.board[2][i] == 'X': self.board[2][i] = '0'
+            if self.board[5][i] == 'X': self.board[5][i] = '0'
 
         if self.name(start) == 'P' or self.name(start) == 'p':
             # Pawn is moved reset 50 move rule
-            self._repeatedMoves = 0
+            self.state["repeatedMoves"] = 0
 
             # When the Pawn moves two square forward, mark the first square to enable En Passant on the next move
             one = self.look(start, (0,1), isWhite)
@@ -135,51 +138,51 @@ class Board:
             
 
         elif self.name(start) == 'K':
-            if self._whiteCastle and end == 'g1':
+            if self.state["whiteCastle"] and end == 'g1':
                 self.setValue('f1', 'R')
                 self.setValue('h1', '0')
-            elif self._whiteCastleLong and end == 'c1':
+            elif self.state["whiteCastleLong"] and end == 'c1':
                 self.setValue('d1', 'R')
                 self.setValue('a1', '0')
             
         elif self.name(start) == 'k':
-            if self._blackCastle and end == 'g8':
+            if self.state["blackCastle"] and end == 'g8':
                 self.setValue('f8', 'r')
                 self.setValue('h8', '0')
-            elif self._blackCastleLong and end == 'c8':
+            elif self.state["blackCastleLong"] and end == 'c8':
                 self.setValue('d8', 'r')
                 self.setValue('a8', '0')
 
         # Setting the value of target square to start piece, and start piece to empty, and switch turns
         self.setValue(end, self.name(start))
         self.setValue(start, '0')
-        self.whiteTurn = not self.whiteTurn
+        self.state["whiteTurn"] = not self.state["whiteTurn"]
             
         # automatically promote to queen
         for i in range(8):
-            if self.state[0][i] == 'P':
-                self.state[0][i] = 'Q'
-            if self.state[7][i] == 'p':
-                self.state[7][i] = 'q'
+            if self.board[0][i] == 'P':
+                self.board[0][i] = 'Q'
+            if self.board[7][i] == 'p':
+                self.board[7][i] = 'q'
                 
         # When rook is moved that colour can no longer castle that side
         # when king is moved that colour can no longer castle at all
-        if start == 'h1' or start == 'e1': self._whiteCastle = False
-        if start == 'a1' or start == 'e1': self._whiteCastleLong = False
-        if start == 'h8' or start == 'e8': self._blackCastle = False
-        if start == 'a8' or start == 'e8': self._blackCastleLong = False
+        if start == 'h1' or start == 'e1': self.state["whiteCastle"] = False
+        if start == 'a1' or start == 'e1': self.state["whiteCastleLong"] = False
+        if start == 'h8' or start == 'e8': self.state["blackCastle"] = False
+        if start == 'a8' or start == 'e8': self.state["blackCastleLong"] = False
         
         return True
 
     def back(self) -> bool:
         last = self.history.pop()
+        lastState = self.pastStates.pop()
         if last is None:
             return False
         for i in range(8):
             for j in range(8):
-                self.state[i][j] = last[i * 8 + j]
-        self.whiteTurn = not self.whiteTurn
-        self._repeatedMoves -= 1
+                self.board[i][j] = last[i * 8 + j]
+        self.state.update(lastState)
         return True
 
     # returns pos of piece in chosen dir, returns '00' if hitting wall
@@ -203,13 +206,13 @@ class Board:
             return 'W'
         else:
             a, b = self.listPos(target)
-            return self.state[a][b]
+            return self.board[a][b]
 
     # assumes kings always exist, side = True if white, else black 
     def locateKing(self, isWhite: bool) -> str:
         if isWhite: king = 'K'
         else: king = 'k'
-        temp = self.state
+        temp = self.board
         for row in temp:
             if king in row:
                 return self.chessPos(temp.index(row), row.index(king))
@@ -240,7 +243,7 @@ class Board:
 
 
     def isDraw(self, side: bool) -> bool:
-        if self._repeatedMoves >= 50: return True
+        if self.state["repeatedMoves"] >= 50: return True
         if self.gameDraw: return True
         side = not side
         c = self.inCheck(side)
@@ -315,12 +318,12 @@ class Board:
         rightTwo = self.look(target, (2,0))
 
         # KingHelper only considers castle moves on 'target' turn
-        if self.whiteTurn == isWhite:
+        if self.state["whiteTurn"] == isWhite:
             danger = self.danger(isWhite)
             if target not in danger:
-                if ((isWhite and self._whiteCastleLong) or (not isWhite and self._blackCastleLong)) and self.colour(leftOne) == 0 and self.colour(leftTwo) == 0 and (leftTwo not in danger) and (leftOne not in danger):
+                if ((isWhite and self.state["whiteCastleLong"]) or (not isWhite and self.state["blackCastleLong"])) and self.colour(leftOne) == 0 and self.colour(leftTwo) == 0 and (leftTwo not in danger) and (leftOne not in danger):
                     emptySquare.append(leftTwo)
-                if ((isWhite and self._whiteCastle) or (not isWhite and self._blackCastle)) and self.colour(rightOne) == 0 and self.colour(rightTwo) == 0 and (rightTwo not in danger) and (rightOne not in danger):
+                if ((isWhite and self.state["whiteCastle"]) or (not isWhite and self.state["blackCastle"])) and self.colour(rightOne) == 0 and self.colour(rightTwo) == 0 and (rightTwo not in danger) and (rightOne not in danger):
                     emptySquare.append(rightTwo)
 
 

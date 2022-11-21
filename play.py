@@ -143,7 +143,7 @@ class play:
             if side: side = self.turn
             else: side = not self.turn
         self.draw_base(side)
-        b = self.new.state
+        b = self.new.board
         for i, r in enumerate(b):
             for j, p in enumerate(r):
                 if side: row, col = i, j
@@ -186,7 +186,7 @@ def main():
             if e.type == QUIT:      
                 run=False
             elif e.type == KEYDOWN:
-                if e.key == K_SPACE:
+                if e.key == K_LEFT:
                     if g1.new.back():
                         g1.turn = not g1.turn
 
