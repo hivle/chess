@@ -22,7 +22,6 @@ class play:
     mbhold = False
     mxhold = -2
     myhold = -2
-    khold = False
 
     #turn is True for white and False for black
     turn = True
@@ -30,7 +29,7 @@ class play:
     tempresult = []
     tempattack = []
     
-    white,black,green,red = (230,196,146),(84,54,36),(0,153,76),(255,0,0)
+    white, black, green, red= (230,196,146),(84,54,36),(0,153,76),(255,0,0)
 
     selected = (-1, -1)
     isSelected = False
@@ -74,11 +73,7 @@ class play:
         mb = mouse.get_pressed()
         sx, sy = self.selected
 
-        if mb[2]:
-            self.isSelected = False
-            self.selected = (-1,-1)
-
-        elif mb[0]:
+        if mb[0]:
 
             if self.mbhold:
                 mx = self.mxhold
@@ -93,8 +88,8 @@ class play:
                     else: m = self.new.chessPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square)
                     if self.new.chessPos(sy,sx) == i and self.new.move(m,i):
                         self.turn = not self.turn
-                    self.isSelected = False
                         
+
             if (self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 1)) or (not self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 2)):
                 self.tempresult, self.tempattack = self.new.legal(self.new.chessPos(sy,sx))
             else:
@@ -178,17 +173,21 @@ class play:
 def main():
     #starting side
     side = True
-    flip = False
+    flip = True
     g1 = play(side)
     run=True
     while run:
         for e in event.get():       
             if e.type == QUIT:      
                 run=False
-            elif e.type == KEYDOWN:
-                if e.key == K_LEFT:
-                    if g1.new.back():
-                        g1.turn = not g1.turn
+            elif e.type == KEYDOWN and e.key == K_LEFT:
+                if g1.new.back():
+                    g1.turn = not g1.turn
+            elif e.type == MOUSEBUTTONDOWN:
+                if e.button == 3:
+                    g1.isSelected = False
+                    g1.selected = (-1,-1)
+
 
         g1.draw_board(side, flip)
         g1.select(side, flip)
