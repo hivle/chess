@@ -1,7 +1,6 @@
 import os
 from game import Board
 from pygame import *
-#import psutil
 
 def load_images(path_to_directory):
     image_dict = {}
@@ -14,17 +13,11 @@ def load_images(path_to_directory):
 
 
 class play:
-    new = Board()
-    size = 600
-    square = size // 8
-    pieceSize = size//10
-    cent = (square - pieceSize)//2
     mbhold = False
     mxhold = -2
     myhold = -2
 
     #turn is True for white and False for black
-    turn = True
 
     tempresult = []
     tempattack = []
@@ -34,32 +27,33 @@ class play:
     selected = (-1, -1)
     isSelected = False
 
-    chesspieces = load_images('style/pixle')
-
-    def __init__(self, side: bool = True, size: int = 600):
-        side = side * self.turn
+    def __init__(self, side: bool = True, size: int = 600, flip: bool = False):
+        init()
+        self.new = Board()
+        self.flip = flip
+        self.m = True
+        self.side = side
+        self.turn = True
         self.size = (size // 8) * 8
         self.square = size//8
         self.pieceSize = size//10
         self.cent = (self.square - self.pieceSize)//2
-
+        self.chesspieces = load_images('style/pixle')
         for pieces in self.chesspieces:
             self.chesspieces[pieces] = transform.scale(self.chesspieces[pieces], (self.pieceSize, self.pieceSize))
-
+        self.text = font.Font('Fonts\ka1.ttf', self.square//2)
         self.screen = display.set_mode((size, size))
 
-    def gameOver(self, side: bool, draw: bool = False):
+    def gameOver(self, whiteWin: bool, draw: bool = False):
         print("game over") #TODO
         if draw: print("Draw")
-        elif side: print("white won")
+        elif whiteWin: print("white won")
         else: print("balck won") 
 
-    # determine select and selcect move
-    def select(self, side: bool = True, autoflip: bool = False):
-        if autoflip: 
+    def markCheck(self, side: bool = True):
+        if self.flip: 
             if side: side = self.turn
             else: side = not self.turn
-        # mark king if it's in check
         if self.new.inCheck(True):
             x,y = self.new.listPos(self.new.locateKing(True))
             if not side: x, y = 7-x, 7-y
@@ -69,35 +63,64 @@ class play:
             if not side: x, y = 7-x, 7-y
             draw.rect(self.screen, self.red, (y*self.square, x*self.square, self.square, self.square), self.square//16)
 
+    def menu(self):
+        draw.rect(self.screen, self.white, (0, 0, self.size, self.size))
+        play = self.text.render(("Play"), True,(255,255,255))
+        playGrey = self.text.render(("Play"), True,(230,230,230))
+        q = self.text.render(("Quit"), True,(255,255,255))
+        qGrey = self.text.render(("Quit"), True,(230,230,230))
+        clickb=Rect(self.size//2-self.square,self.size//2+self.square//20,self.square*5//3,self.square//2)
+        clickq=Rect(self.size//2-self.square,self.size//2+self.pieceSize,self.square*5//3,self.square//2)
+        self.screen.blit(play,(self.size//2-self.square, self.size//2))
+        self.screen.blit(q,(self.size//2-self.square+self.pieceSize//10, self.size//2+self.pieceSize))
+
+        mx,my = mouse.get_pos()
+        mb = mouse.get_pressed()
+        if clickb.collidepoint(mx,my):
+            self.screen.blit(playGrey,(self.size//2-self.square, self.size//2))
+            if mb[0] == 1:
+                self.m = False
+        if clickq.collidepoint(mx,my):
+            self.screen.blit(qGrey,(self.size//2-self.square+self.pieceSize//10, self.size//2+self.pieceSize))
+            if mb[0] == 1:
+                quit()
+            
+
+    # determine select and selcect move
+    def select(self, side: bool = True):
+        if self.flip: 
+            if side: side = self.turn
+            else: side = not self.turn
+
         mx,my = mouse.get_pos()
         mb = mouse.get_pressed()
         sx, sy = self.selected
 
         if mb[0]:
-
             if self.mbhold:
                 mx = self.mxhold
                 my = self.myhold
 
-            if side: sx,sy = mx // self.square, my // self.square
-            else: sx,sy = 7 - mx//self.square, 7 - my // self.square
-
+            cx,cy = mx // self.square, my // self.square
+            sx, sy = cx * self.square, cy * self.square
+            if not side:
+                sx, sy = cx* self.square, cy*self.square
+                cx,cy =  7-cx,  7-cy
+                    
             if (self.isSelected):
-                for i in self.tempattack + self.tempresult:
-                    if side: m = self.new.chessPos(self.selected[1]//self.square,self.selected[0]//self.square)
-                    else: m = self.new.chessPos(7-self.selected[1]//self.square,7-self.selected[0]//self.square)
-                    if self.new.chessPos(sy,sx) == i and self.new.move(m,i):
+                for target in self.tempattack + self.tempresult:
+                    startx, starty = self.selected[1]//self.square, self.selected[0]//self.square
+                    if not side:    startx, starty = 7 - startx, 7 - starty
+                    start = self.new.chessPos(startx, starty)
+                    if self.new.chessPos(cy,cx) == target and self.new.move(start,target):
                         self.turn = not self.turn
-                        
 
-            if (self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 1)) or (not self.turn and (self.new.colour(self.new.chessPos(sy,sx)) == 2)):
-                self.tempresult, self.tempattack = self.new.legal(self.new.chessPos(sy,sx))
+
+            if (self.turn and (self.new.colour(self.new.chessPos(cy,cx)) == 1)) or (not self.turn and (self.new.colour(self.new.chessPos(cy,cx)) == 2)):
+                self.tempresult, self.tempattack = self.new.legal(self.new.chessPos(cy,cx))
             else:
                 self.tempresult, self.tempattack = [],[]
-
-            if side: sx, sy = sx * self.square, sy * self.square
-            else: sx, sy = (7 - sx) * self.square, (7 - sy)*self.square
-
+ 
             self.isSelected = True
             self.selected = sx, sy
             
@@ -124,20 +147,19 @@ class play:
         else:
             self.mbhold = False
 
-    def draw_base(self, side: bool = True):
+    def draw_base(self):
         for i in range(8):
-            for j in range(9):
-                if not side: i, j = i, j - 1
+            for j in range(8):
                 if (i + j) % 2:
                     draw.rect(self.screen,self.black,(i*self.square,j*self.square,self.square, self.square))
                 else:
                     draw.rect(self.screen,self.white,(i*self.square,j*self.square,self.square, self.square))
-
-    def draw_board(self, side: bool = True, autoflip: bool = False):
-        if autoflip: 
+ 
+    def draw_board(self, side: bool = True):
+        self.draw_base()
+        if self.flip: 
             if side: side = self.turn
             else: side = not self.turn
-        self.draw_base(side)
         b = self.new.board
         for i, r in enumerate(b):
             for j, p in enumerate(r):
@@ -173,9 +195,8 @@ class play:
 def main():
     #starting side
     side = True
-    flip = True
-    g1 = play(side)
-    run=True
+    g1 = play(side,flip = False)
+    run = True
     while run:
         for e in event.get():       
             if e.type == QUIT:      
@@ -183,14 +204,20 @@ def main():
             elif e.type == KEYDOWN and e.key == K_LEFT:
                 if g1.new.back():
                     g1.turn = not g1.turn
+            elif e.type == KEYDOWN and e.key == K_q:
+                g1.m = True
             elif e.type == MOUSEBUTTONDOWN:
                 if e.button == 3:
                     g1.isSelected = False
                     g1.selected = (-1,-1)
+    
 
-
-        g1.draw_board(side, flip)
-        g1.select(side, flip)
+        if g1.m:
+            g1.menu()
+        else:
+            g1.draw_board(side)
+            g1.markCheck(side)
+            g1.select(side)
         if g1.new.isDraw(side):
             g1.gameOver(side, True)
             run = False
@@ -202,7 +229,6 @@ def main():
         elif g1.new.isMate(not side):
             g1.gameOver(not side)
             run = False
-        #print(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2)
         display.flip()
     quit()
 
