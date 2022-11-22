@@ -41,7 +41,7 @@ class play:
         self.chesspieces = load_images('style/pixle')
         for pieces in self.chesspieces:
             self.chesspieces[pieces] = transform.scale(self.chesspieces[pieces], (self.pieceSize, self.pieceSize))
-        self.text = font.Font('Fonts\ka1.ttf', self.square//2)
+        self.text = font.Font('Fonts/ka1.ttf', self.square//2)
         self.screen = display.set_mode((size, size))
 
     def gameOver(self, whiteWin: bool, draw: bool = False):
