@@ -19,7 +19,7 @@ class Board:
             "blackCastle": True,
             "whiteCastleLong": True,
             "blackCastleLong": True,
-            "repeatedMoves": 0,
+            "repeatedMoves": 0
         }
 
         self.gameDraw = False
@@ -39,19 +39,16 @@ class Board:
         self.pastStates = Stack()
     
     # Side is True for white at bottom, False for black
-    def __str__(self, side: bool = True) -> str:
-        order = range(8, 0, -1)
-        if not side: order = reversed(order)
-        result = ""
-        for row in order:
-            result += f"  ---------------------------------\n" + str(row) + " | "
+    def __str__(self) -> str:
+        result = f""
+        for row in range(8, 0, -1):
+            result = f"{result}   ---------------------------------\n {row} | "
             for piece in self.board[8 - row]:
                 if piece == '0':
-                    result += "  | "
-                else:
-                    result = result + piece + " | "
-            result += "\n" # prints new line after each row
-        result += "  ---------------------------------\n    a   b   c   d   e   f   g   h\n"
+                    piece = ' '
+                result = f"{result}{piece} | "
+            result = f"{result}\n" # prints new line after each row
+        result = f"{result}   ---------------------------------\n    a   b   c   d   e   f   g   h\n"
         return result
     
     def isEnemy(self, squareOne: str, squareTwo: str) -> bool:
@@ -383,4 +380,4 @@ class Board:
         list(set(bad))
         return bad
 
-## TODO: add menu, add backtracks, stay on the same square after moving when flipping sides
+## TODO: add menu, stay on the same square after moving when flipping sides, time games not enough piece power draw/win
