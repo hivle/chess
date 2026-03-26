@@ -37,7 +37,7 @@ class Board:
 
         self.history = Stack()
         self.pastStates = Stack()
-    
+
     # Side is True for white at bottom, False for black
     def __str__(self) -> str:
         result = f""
@@ -50,7 +50,7 @@ class Board:
             result = f"{result}\n" # prints new line after each row
         result = f"{result}   ---------------------------------\n    a   b   c   d   e   f   g   h\n"
         return result
-    
+
     def isEnemy(self, squareOne: str, squareTwo: str) -> bool:
         pieceOne = self.name(squareOne)
         pieceTwo = self.name(squareTwo)
@@ -72,7 +72,7 @@ class Board:
     # Translate indexes to chess coorinates
     def chessPos(self, row: int, col: int) -> str:
         return chr(ord('a') + col) + chr(ord('8') - row)
-    
+
     # returns 0 for empty, 1 for white, 2 for black, 3 for out of range
     def colour(self, target: str) -> int:
         val = self.name(target)
@@ -111,7 +111,7 @@ class Board:
             self.gameDraw = True
 
         self.state["repeatedMoves"] += 1
-        # if taking a pieces, state cannot repeat thus clearing previous stored states
+        # if taking a piece, reset 50-move counter
         if self.isEnemy(start, end): self.state["repeatedMoves"] = 0
 
         # enpassant move
@@ -131,7 +131,7 @@ class Board:
             one = self.look(start, (0,1), isWhite)
             two = self.look(one, (0,1), isWhite)
             if end == two:  self.setValue(one, 'X')
-            
+
 
         elif self.name(start) == 'K':
             if self.state["whiteCastle"] and end == 'g1':
@@ -140,7 +140,7 @@ class Board:
             elif self.state["whiteCastleLong"] and end == 'c1':
                 self.setValue('d1', 'R')
                 self.setValue('a1', '0')
-            
+
         elif self.name(start) == 'k':
             if self.state["blackCastle"] and end == 'g8':
                 self.setValue('f8', 'r')
@@ -153,21 +153,21 @@ class Board:
         self.setValue(end, self.name(start))
         self.setValue(start, '0')
         self.state["whiteTurn"] = not self.state["whiteTurn"]
-            
+
         # automatically promote to queen
         for i in range(8):
             if self.board[0][i] == 'P':
                 self.board[0][i] = 'Q'
             if self.board[7][i] == 'p':
                 self.board[7][i] = 'q'
-                
+
         # When rook is moved that colour can no longer castle that side
         # when king is moved that colour can no longer castle at all
         if start == 'h1' or start == 'e1': self.state["whiteCastle"] = False
         if start == 'a1' or start == 'e1': self.state["whiteCastleLong"] = False
         if start == 'h8' or start == 'e8': self.state["blackCastle"] = False
         if start == 'a8' or start == 'e8': self.state["blackCastleLong"] = False
-        
+
         return True
 
     def back(self) -> bool:
@@ -204,7 +204,7 @@ class Board:
             a, b = self.listPos(target)
             return self.board[a][b]
 
-    # assumes kings always exist, side = True if white, else black 
+    # assumes kings always exist, side = True if white, else black
     def locateKing(self, isWhite: bool) -> str:
         if isWhite: king = 'K'
         else: king = 'k'
@@ -212,51 +212,39 @@ class Board:
         for row in temp:
             if king in row:
                 return self.chessPos(temp.index(row), row.index(king))
-    
-           
+
+
     def inCheck(self, isWhite: bool) -> bool:
         loc = self.locateKing(isWhite)
-        return self.isSafe(isWhite, loc)
+        return self.isAttacked(isWhite, loc)
 
-    def isMate(self, side: bool) -> bool:
-        side = not side
-        if not self.inCheck(side):
+    def isMate(self, whiteToMove: bool) -> bool:
+        if not self.inCheck(whiteToMove):
             return False
-        if side:    clr = 1
-        else:       clr = 2
-        for i in _charRange('a','h'):
-            for j in _charRange('1','8'):
-                k = i + j
-                if (self.colour(k) == clr):
-                    t1, t2 = self.legal(k)
-                    t3 = t1 + t2
-                    for l in t3:
-                        temp = deepcopy(self)
-                        temp.move(k, l)
-                        if not temp.inCheck(side):
-                            return False
-        return True
+        return not self._hasLegalMove(whiteToMove)
 
-
-    def isDraw(self, side: bool) -> bool:
+    def isDraw(self, whiteToMove: bool) -> bool:
         if self.state["repeatedMoves"] >= 50: return True
         if self.gameDraw: return True
-        side = not side
-        c = self.inCheck(side)
-        if side:    clr = 1
-        else:       clr = 2
+        # Stalemate: not in check and no legal moves
+        if self.inCheck(whiteToMove):
+            return False
+        return not self._hasLegalMove(whiteToMove)
+
+    def _hasLegalMove(self, whiteToMove: bool) -> bool:
+        """Return True if the side to move has at least one legal move."""
+        clr = 1 if whiteToMove else 2
         for i in _charRange('a','h'):
             for j in _charRange('1','8'):
-                k = i + j
-                if (self.colour(k) == clr):
-                    t1, t2 = self.legal(k)
-                    t3 = t1 + t2
-                    for l in t3:
+                sq = i + j
+                if self.colour(sq) == clr:
+                    moves, attacks = self.legal(sq)
+                    for target in moves + attacks:
                         temp = deepcopy(self)
-                        temp.move(k, l)
-                        if not temp.inCheck(side):
-                            return False 
-        return not c
+                        temp.move(sq, target, False)
+                        if not temp.inCheck(whiteToMove):
+                            return True
+        return False
 
     def _rookHelper(self, target: str) -> tuple[list[str], list[str]]:
         emptySquare = []
@@ -307,21 +295,25 @@ class Board:
                     elif self.isEnemy(move, target):
                         attack.append(move)
 
-        # Castle check
-        leftOne = self.look(target,(-1,0))
-        rightOne = self.look(target,(1,0))
-        leftTwo = self.look(target, (-2,0)) 
-        rightTwo = self.look(target, (2,0))
-
-        # KingHelper only considers castle moves on 'target' turn
+        # Castle check - only on king's own turn
         if self.state["whiteTurn"] == isWhite:
             danger = self.danger(isWhite)
             if target not in danger:
-                if ((isWhite and self.state["whiteCastleLong"]) or (not isWhite and self.state["blackCastleLong"])) and self.colour(leftOne) == 0 and self.colour(leftTwo) == 0 and (leftTwo not in danger) and (leftOne not in danger):
-                    emptySquare.append(leftTwo)
-                if ((isWhite and self.state["whiteCastle"]) or (not isWhite and self.state["blackCastle"])) and self.colour(rightOne) == 0 and self.colour(rightTwo) == 0 and (rightTwo not in danger) and (rightOne not in danger):
-                    emptySquare.append(rightTwo)
-
+                # Queenside (long) castle
+                leftOne = self.look(target,(-1,0))   # d-file
+                leftTwo = self.look(target, (-2,0))   # c-file
+                leftThree = self.look(target, (-3,0)) # b-file
+                if ((isWhite and self.state["whiteCastleLong"]) or (not isWhite and self.state["blackCastleLong"])):
+                    if self.colour(leftOne) == 0 and self.colour(leftTwo) == 0 and self.colour(leftThree) == 0:
+                        if leftOne not in danger and leftTwo not in danger:
+                            emptySquare.append(leftTwo)
+                # Kingside castle
+                rightOne = self.look(target,(1,0))    # f-file
+                rightTwo = self.look(target, (2,0))    # g-file
+                if ((isWhite and self.state["whiteCastle"]) or (not isWhite and self.state["blackCastle"])):
+                    if self.colour(rightOne) == 0 and self.colour(rightTwo) == 0:
+                        if rightOne not in danger and rightTwo not in danger:
+                            emptySquare.append(rightTwo)
 
         return emptySquare, attack
 
@@ -329,14 +321,14 @@ class Board:
         emptySquare = []
         attack = []
         side = self.colour(target) == 1
-        one = self.look(target, (0,1), side)   # 1 sqaure front of target
+        one = self.look(target, (0,1), side)   # 1 square front of target
         two = self.look(target, (0,2), side)   # 2 squares front of target
         upright = self.look(target, (1,1), side)
         upleft = self.look(target, (-1,1), side)
         if self.name(one) == '0':
             emptySquare.append(one)
             if self.name(two) == '0':
-                # When white pawn is on 7th row or black pawn is on 2nd row, they can move two squares
+                # When white pawn is on 2nd row or black pawn is on 7th row, they can move two squares
                 if (target[1] == '2'  and self.name(target) == 'P') or (target[1] == '7' and self.name(target) == 'p'):
                     emptySquare.append(two)
         if self.isEnemy(upleft, target): attack.append(upleft)
@@ -362,22 +354,48 @@ class Board:
                 emptySquare, attack = self._knightHelper(target)
             case 'K' | 'k':
                 emptySquare, attack = self._kingHelper(target)
+            case _:
+                emptySquare, attack = [], []
         return emptySquare, attack
 
-    def isSafe(self, side: bool, target: str) -> bool:
-        return (target in self.danger(side))
+    def isAttacked(self, side: bool, target: str) -> bool:
+        """Return True if target square is attacked by the opponent of 'side'."""
+        return target in self.danger(side)
+
+    # Keep old name as alias for compatibility
+    isSafe = isAttacked
 
     def danger(self, side: bool) -> list[str]:
-        bad = []
-        enemyColour = 1
-        if side: enemyColour = 2
+        """Return list of squares attacked by the opponent of 'side'.
+
+        Uses simplified attack patterns: pawns only attack diagonally,
+        kings use basic moves (no castling), to avoid recursion issues.
+        """
+        bad = set()
+        enemyColour = 2 if side else 1
         for i in _charRange('a','h'):
             for j in _charRange('1','8'):
-                k = i + j
-                if self.colour(k) == enemyColour:
-                    emptySquare, attack = self.legal(k)
-                    bad = bad + emptySquare + attack
-        list(set(bad))
-        return bad
-
-## TODO: add menu, stay on the same square after moving when flipping sides, time games not enough piece power draw/win
+                sq = i + j
+                if self.colour(sq) != enemyColour:
+                    continue
+                piece = self.name(sq)
+                if piece in ('P', 'p'):
+                    # Pawns only threaten diagonally, not forward
+                    pawnIsWhite = piece == 'P'
+                    for dx in (-1, 1):
+                        diag = self.look(sq, (dx, 1), pawnIsWhite)
+                        if diag != '00':
+                            bad.add(diag)
+                elif piece in ('K', 'k'):
+                    # King threatens adjacent squares only (no castling)
+                    for direction in product([1,-1,0],[1,-1,0]):
+                        if direction != (0,0):
+                            move = self.look(sq, direction)
+                            if move != '00':
+                                bad.add(move)
+                else:
+                    # For all other pieces, legal() is fine
+                    emptySquare, attack = self.legal(sq)
+                    bad.update(emptySquare)
+                    bad.update(attack)
+        return list(bad)
