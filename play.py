@@ -23,7 +23,6 @@ class play:
         self.flip = flip
         self.m = True
         self.side = side
-        self.turn = True
         self.size = (size // 8) * 8
         self.square = size // 8
         self.pieceSize = size // 10
@@ -42,6 +41,11 @@ class play:
         self.tempresult = []
         self.tempattack = []
         self.mbhold = False
+
+    @property
+    def whiteTurn(self):
+        """Single source of truth for whose turn it is."""
+        return self.new.state["whiteTurn"]
 
     def gameOver(self, whiteWin: bool, isDraw: bool = False):
         if isDraw:
@@ -65,12 +69,11 @@ class play:
     def _viewSide(self, side: bool) -> bool:
         """Return the effective view side accounting for flip mode."""
         if self.flip:
-            return self.turn if side else not self.turn
+            return self.whiteTurn if side else not self.whiteTurn
         return side
 
     def markCheck(self, side: bool = True):
         vs = self._viewSide(side)
-        # Check both sides for check
         for isWhite in (True, False):
             if self.new.inCheck(isWhite):
                 x, y = self.new.listPos(self.new.locateKing(isWhite))
@@ -113,7 +116,7 @@ class play:
 
     def _isCurrentPlayerPiece(self, square: str) -> bool:
         clr = self.new.colour(square)
-        return (self.turn and clr == 1) or (not self.turn and clr == 2)
+        return (self.whiteTurn and clr == 1) or (not self.whiteTurn and clr == 2)
 
     def select(self, side: bool = True):
         vs = self._viewSide(side)
@@ -121,7 +124,7 @@ class play:
         mb = mouse.get_pressed()
 
         # Invalidate selection if the selected piece no longer belongs to current player
-        # (e.g. after undo changed the turn or board)
+        # (catches undo, board changes, or any turn desync)
         if self.isSelected and not self._isCurrentPlayerPiece(self.selectedSquare):
             self._clearSelection()
 
@@ -139,7 +142,7 @@ class play:
             if self.isSelected:
                 if clicked_square in self.tempresult + self.tempattack:
                     if self.new.move(self.selectedSquare, clicked_square):
-                        self.turn = not self.turn
+                        # move() flips whiteTurn internally - no manual turn flip needed
                         self._clearSelection()
                         self.mbhold = True
                         return
@@ -231,15 +234,14 @@ def main():
                 run = False
             elif e.type == KEYDOWN and e.key == K_LEFT:
                 if not gameEnded and g1.new.back():
-                    g1.turn = not g1.turn
+                    # back() restores whiteTurn from history - no manual flip needed
                     g1._clearSelection()
                     g1.mbhold = True  # consume any held click
             elif e.type == KEYDOWN and e.key == K_q:
                 g1.m = True
                 gameEnded = False
                 g1.gameOverText = None
-                g1.new = Board()
-                g1.turn = True
+                g1.new = Board()  # new Board() resets whiteTurn to True
                 g1._clearSelection()
                 g1.mbhold = True  # consume any held click
             elif e.type == MOUSEBUTTONDOWN:
@@ -256,12 +258,11 @@ def main():
 
             # Check game-over conditions based on whose turn it is
             if not gameEnded:
-                if g1.new.isDraw(g1.turn):
+                if g1.new.isDraw(g1.whiteTurn):
                     g1.gameOver(False, isDraw=True)
                     gameEnded = True
-                elif g1.new.isMate(g1.turn):
-                    # Current player is mated, so the other player wins
-                    g1.gameOver(whiteWin=not g1.turn)
+                elif g1.new.isMate(g1.whiteTurn):
+                    g1.gameOver(whiteWin=not g1.whiteTurn)
                     gameEnded = True
 
             if gameEnded:
