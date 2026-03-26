@@ -27,9 +27,18 @@ class play:
         self.square = size // 8
         self.pieceSize = size // 10
         self.cent = (self.square - self.pieceSize) // 2
-        self.chesspieces = load_images('style/pixle')
-        for pieces in self.chesspieces:
-            self.chesspieces[pieces] = transform.scale(self.chesspieces[pieces], (self.pieceSize, self.pieceSize))
+        raw_images = load_images('style/pixle')
+        for key in raw_images:
+            raw_images[key] = transform.scale(raw_images[key], (self.pieceSize, self.pieceSize))
+        # Map board characters to their images
+        self.pieceImages = {
+            'P': raw_images['pawn'],   'p': raw_images['pawn1'],
+            'R': raw_images['rook'],   'r': raw_images['rook1'],
+            'B': raw_images['bishop'], 'b': raw_images['bishop1'],
+            'Q': raw_images['queen'],  'q': raw_images['queen1'],
+            'N': raw_images['knight'], 'n': raw_images['knight1'],
+            'K': raw_images['king'],   'k': raw_images['king1'],
+        }
         self.text = font.Font('Fonts/ka1.ttf', self.square // 2)
         self.screen = display.set_mode((size, size))
         self.gameOverText = None
@@ -189,38 +198,11 @@ class play:
     def draw_board(self, side: bool = True):
         self.draw_base()
         vs = self._viewSide(side)
-        b = self.new.board
-        for i, r in enumerate(b):
-            for j, p in enumerate(r):
-                if vs:
-                    row, col = i, j
-                else:
-                    row, col = 7 - i, 7 - j
-                match p:
-                    case 'P':
-                        self.screen.blit(self.chesspieces['pawn'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'R':
-                        self.screen.blit(self.chesspieces['rook'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'B':
-                        self.screen.blit(self.chesspieces['bishop'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'Q':
-                        self.screen.blit(self.chesspieces['queen'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'N':
-                        self.screen.blit(self.chesspieces['knight'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'K':
-                        self.screen.blit(self.chesspieces['king'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'p':
-                        self.screen.blit(self.chesspieces['pawn1'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'r':
-                        self.screen.blit(self.chesspieces['rook1'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'b':
-                        self.screen.blit(self.chesspieces['bishop1'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'q':
-                        self.screen.blit(self.chesspieces['queen1'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'n':
-                        self.screen.blit(self.chesspieces['knight1'], (col * self.square + self.cent, row * self.square + self.cent))
-                    case 'k':
-                        self.screen.blit(self.chesspieces['king1'], (col * self.square + self.cent, row * self.square + self.cent))
+        for i, row in enumerate(self.new.board):
+            for j, piece in enumerate(row):
+                if piece in self.pieceImages:
+                    r, c = (i, j) if vs else (7 - i, 7 - j)
+                    self.screen.blit(self.pieceImages[piece], (c * self.square + self.cent, r * self.square + self.cent))
 
 
 def main():
