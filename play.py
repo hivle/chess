@@ -246,7 +246,9 @@ def main():
                 run = False
             elif e.type == KEYDOWN and e.key == K_LEFT:
                 if not gameEnded and g1.new.back():
-                    # back() restores whiteTurn from history - no manual flip needed
+                    # In AI mode, undo both AI's move and player's move
+                    if g1.ai_depth > 0:
+                        g1.new.back()
                     g1._clearSelection()
                     g1.mbhold = True  # consume any held click
             elif e.type == KEYDOWN and e.key == K_q:
