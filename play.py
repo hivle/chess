@@ -110,15 +110,9 @@ class play:
         mx, my = mouse.get_pos()
         mb = mouse.get_pressed()
 
-        if mb[0]:
-            # On held click, use original click position
-            if self.mbhold:
-                mx = self.mxhold
-                my = self.myhold
-
-            # Convert pixel to board col/row
+        # Only process on NEW click (not while held)
+        if mb[0] and not self.mbhold:
             pixel_col, pixel_row = mx // self.square, my // self.square
-            # Board coordinates (accounting for flipped view)
             if vs:
                 board_col, board_row = pixel_col, pixel_row
             else:
@@ -129,7 +123,6 @@ class play:
             # If we already have a piece selected, try to move to clicked square
             if self.isSelected:
                 if clicked_square in self.tempresult + self.tempattack:
-                    # Compute the start square from the stored selection
                     sel_px, sel_py = self.selected
                     if vs:
                         start_col, start_row = sel_px // self.square, sel_py // self.square
@@ -141,10 +134,7 @@ class play:
                         self.isSelected = False
                         self.selected = (-1, -1)
                         self.tempresult, self.tempattack = [], []
-                        # Update hold state and return early
                         self.mbhold = True
-                        self.mxhold = mx
-                        self.myhold = my
                         return
 
             # Select a new piece if it belongs to the current player
@@ -178,13 +168,7 @@ class play:
                 draw.rect(self.screen, self.red, (px, py, self.square, self.square), self.square // 16)
 
         # Track mouse hold state
-        mb = mouse.get_pressed()
-        if mb[0]:
-            self.mbhold = True
-            self.mxhold = mx
-            self.myhold = my
-        else:
-            self.mbhold = False
+        self.mbhold = mb[0]
 
     def draw_base(self):
         for i in range(8):
@@ -236,9 +220,7 @@ def main():
     g1 = play(side, flip=False)
     run = True
     gameEnded = False
-    skipSelect = False
     while run:
-        skipSelect = False
         for e in event.get():
             if e.type == QUIT:
                 run = False
@@ -248,8 +230,7 @@ def main():
                     g1.isSelected = False
                     g1.selected = (-1, -1)
                     g1.tempresult, g1.tempattack = [], []
-                    g1.mbhold = False
-                    skipSelect = True
+                    g1.mbhold = True  # consume any held click
             elif e.type == KEYDOWN and e.key == K_q:
                 g1.m = True
                 gameEnded = False
@@ -258,8 +239,7 @@ def main():
                 g1.turn = True
                 g1.isSelected = False
                 g1.tempresult, g1.tempattack = [], []
-                g1.mbhold = False
-                skipSelect = True
+                g1.mbhold = True  # consume any held click
             elif e.type == MOUSEBUTTONDOWN:
                 if e.button == 3:
                     g1.isSelected = False
@@ -271,7 +251,7 @@ def main():
         else:
             g1.draw_board(side)
             g1.markCheck(side)
-            if not gameEnded and not skipSelect:
+            if not gameEnded:
                 g1.select(side)
 
             # Check game-over conditions based on whose turn it is
