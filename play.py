@@ -149,7 +149,7 @@ class play:
             # Select a new piece if it belongs to the current player
             clicked_colour = self.new.colour(clicked_square)
             if (self.turn and clicked_colour == 1) or (not self.turn and clicked_colour == 2):
-                self.tempresult, self.tempattack = self.new.legal(clicked_square)
+                self.tempresult, self.tempattack = self.new.legalFiltered(clicked_square)
                 self.isSelected = True
                 self.selected = (pixel_col * self.square, pixel_row * self.square)
             else:
@@ -242,6 +242,9 @@ def main():
             elif e.type == KEYDOWN and e.key == K_LEFT:
                 if not gameEnded and g1.new.back():
                     g1.turn = not g1.turn
+                    g1.isSelected = False
+                    g1.selected = (-1, -1)
+                    g1.tempresult, g1.tempattack = [], []
             elif e.type == KEYDOWN and e.key == K_q:
                 g1.m = True
                 gameEnded = False

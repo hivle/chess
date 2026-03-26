@@ -335,7 +335,7 @@ class Board:
         if self.isEnemy(upright,target): attack.append(upright)
         return emptySquare, attack
 
-    # Input a position of a piece and return two list of all posible position
+    # Input a position of a piece and return two list of all posible position (pseudo-legal)
     def legal(self, target: str) -> tuple[list[str], list[str]]:
         piece = self.name(target)
         match piece:
@@ -357,6 +357,24 @@ class Board:
             case _:
                 emptySquare, attack = [], []
         return emptySquare, attack
+
+    def legalFiltered(self, target: str) -> tuple[list[str], list[str]]:
+        """Return only truly legal moves (excludes moves that leave king in check)."""
+        isWhite = self.colour(target) == 1
+        emptySquare, attack = self.legal(target)
+        filteredEmpty = []
+        filteredAttack = []
+        for sq in emptySquare:
+            temp = deepcopy(self)
+            temp.move(target, sq, False)
+            if not temp.inCheck(isWhite):
+                filteredEmpty.append(sq)
+        for sq in attack:
+            temp = deepcopy(self)
+            temp.move(target, sq, False)
+            if not temp.inCheck(isWhite):
+                filteredAttack.append(sq)
+        return filteredEmpty, filteredAttack
 
     def isAttacked(self, side: bool, target: str) -> bool:
         """Return True if target square is attacked by the opponent of 'side'."""
