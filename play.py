@@ -236,7 +236,9 @@ def main():
     g1 = play(side, flip=False)
     run = True
     gameEnded = False
+    skipSelect = False
     while run:
+        skipSelect = False
         for e in event.get():
             if e.type == QUIT:
                 run = False
@@ -246,6 +248,8 @@ def main():
                     g1.isSelected = False
                     g1.selected = (-1, -1)
                     g1.tempresult, g1.tempattack = [], []
+                    g1.mbhold = False
+                    skipSelect = True
             elif e.type == KEYDOWN and e.key == K_q:
                 g1.m = True
                 gameEnded = False
@@ -254,6 +258,8 @@ def main():
                 g1.turn = True
                 g1.isSelected = False
                 g1.tempresult, g1.tempattack = [], []
+                g1.mbhold = False
+                skipSelect = True
             elif e.type == MOUSEBUTTONDOWN:
                 if e.button == 3:
                     g1.isSelected = False
@@ -265,7 +271,7 @@ def main():
         else:
             g1.draw_board(side)
             g1.markCheck(side)
-            if not gameEnded:
+            if not gameEnded and not skipSelect:
                 g1.select(side)
 
             # Check game-over conditions based on whose turn it is
