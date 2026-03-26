@@ -1,5 +1,4 @@
 from copy import deepcopy
-from stack import Stack
 from itertools import permutations, product
 
 def _charRange(c1, c2):
@@ -35,8 +34,8 @@ class Board:
             ['P','P','P','P','P','P','P','P'],
             ['R','N','B','Q','K','B','N','R']]
 
-        self.history = Stack()
-        self.pastStates = Stack()
+        self.history = []
+        self.pastStates = []
 
     # Side is True for white at bottom, False for black
     def __str__(self) -> str:
@@ -105,8 +104,8 @@ class Board:
             for j in i:
                 tempstate = tempstate + j
             newstate = newstate + tempstate
-        self.history.push(newstate)
-        self.pastStates.push(self.state.copy())
+        self.history.append(newstate)
+        self.pastStates.append(self.state.copy())
         if self.history.count(newstate) >= 3:
             self.gameDraw = True
 
@@ -171,10 +170,10 @@ class Board:
         return True
 
     def back(self) -> bool:
+        if not self.history:
+            return False
         last = self.history.pop()
         lastState = self.pastStates.pop()
-        if last is None:
-            return False
         for i in range(8):
             for j in range(8):
                 self.board[i][j] = last[i * 8 + j]
