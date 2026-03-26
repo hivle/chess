@@ -114,10 +114,11 @@ class play:
                     x, y = 7 - x, 7 - y
                 draw.rect(self.screen, self.red, (y * self.square, x * self.square, self.square, self.square), self.square // 16)
 
-    def _menu_button(self, label, x, y, mx, my, clicked):
-        """Draw a menu button, return True if clicked."""
+    def _menu_button(self, label, y, mx, my, clicked):
+        """Draw a centered menu button, return True if clicked."""
         normal = self.text.render(label, True, (255, 255, 255))
         hover = self.text.render(label, True, (230, 230, 230))
+        x = (self.size - normal.get_width()) // 2
         rect = Rect(x, y, normal.get_width() + 10, normal.get_height())
         is_hover = rect.collidepoint(mx, my)
         self.screen.blit(hover if is_hover else normal, (x, y))
@@ -131,7 +132,6 @@ class play:
         mx, my = mouse.get_pos()
         clicked = mouse.get_pressed()[0] and not self.mbhold
 
-        x = self.size // 2 - self.square
         y0 = self.size // 2 - self.square // 2
         gap = self.square * 3 // 4
 
@@ -143,7 +143,7 @@ class play:
             ("Quit", -1),
         ]
         for i, (label, depth) in enumerate(options):
-            if self._menu_button(label, x, y0 + i * gap, mx, my, clicked):
+            if self._menu_button(label, y0 + i * gap, mx, my, clicked):
                 if depth == -1:
                     quit()
                 else:

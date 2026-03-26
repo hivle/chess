@@ -132,12 +132,11 @@ class TestBestMove:
         """AI playing black should capture a hanging queen."""
         b = setup_board({
             'e1': 'K', 'e8': 'k',
-            'd5': 'Q', 'c6': 'n',  # black knight can take white queen
+            'd5': 'Q', 'c3': 'n',  # black knight on c3 can take queen on d5
         })
         b.state["whiteTurn"] = False
         move = best_move(b, depth=2)
-        assert move == ('c6', 'd4') or move == ('c6', 'd8') or move[1] == 'd5', \
-            f"Should capture queen, got {move}"
+        assert move[1] == 'd5', f"Should capture queen on d5, got {move}"
 
     def test_depth_1_is_fast(self):
         b = Board()
