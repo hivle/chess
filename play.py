@@ -38,11 +38,10 @@ class play:
         # Selection state
         self.isSelected = False
         self.selected = (-1, -1)  # pixel coords of selected square
+        self.selectedSquare = ''  # chess notation of selected piece
         self.tempresult = []
         self.tempattack = []
         self.mbhold = False
-        self.mxhold = -2
-        self.myhold = -2
 
     def gameOver(self, whiteWin: bool, isDraw: bool = False):
         if isDraw:
@@ -105,10 +104,26 @@ class play:
             if mb[0] == 1:
                 quit()
 
+    def _clearSelection(self):
+        self.isSelected = False
+        self.selected = (-1, -1)
+        self.selectedSquare = ''
+        self.tempresult = []
+        self.tempattack = []
+
+    def _isCurrentPlayerPiece(self, square: str) -> bool:
+        clr = self.new.colour(square)
+        return (self.turn and clr == 1) or (not self.turn and clr == 2)
+
     def select(self, side: bool = True):
         vs = self._viewSide(side)
         mx, my = mouse.get_pos()
         mb = mouse.get_pressed()
+
+        # Invalidate selection if the selected piece no longer belongs to current player
+        # (e.g. after undo changed the turn or board)
+        if self.isSelected and not self._isCurrentPlayerPiece(self.selectedSquare):
+            self._clearSelection()
 
         # Only process on NEW click (not while held)
         if mb[0] and not self.mbhold:
@@ -123,30 +138,20 @@ class play:
             # If we already have a piece selected, try to move to clicked square
             if self.isSelected:
                 if clicked_square in self.tempresult + self.tempattack:
-                    sel_px, sel_py = self.selected
-                    if vs:
-                        start_col, start_row = sel_px // self.square, sel_py // self.square
-                    else:
-                        start_col, start_row = 7 - sel_px // self.square, 7 - sel_py // self.square
-                    start_square = self.new.chessPos(start_row, start_col)
-                    if self.new.move(start_square, clicked_square):
+                    if self.new.move(self.selectedSquare, clicked_square):
                         self.turn = not self.turn
-                        self.isSelected = False
-                        self.selected = (-1, -1)
-                        self.tempresult, self.tempattack = [], []
+                        self._clearSelection()
                         self.mbhold = True
                         return
 
             # Select a new piece if it belongs to the current player
-            clicked_colour = self.new.colour(clicked_square)
-            if (self.turn and clicked_colour == 1) or (not self.turn and clicked_colour == 2):
+            if self._isCurrentPlayerPiece(clicked_square):
                 self.tempresult, self.tempattack = self.new.legalFiltered(clicked_square)
                 self.isSelected = True
+                self.selectedSquare = clicked_square
                 self.selected = (pixel_col * self.square, pixel_row * self.square)
             else:
-                self.tempresult, self.tempattack = [], []
-                self.isSelected = False
-                self.selected = (-1, -1)
+                self._clearSelection()
 
         # Draw selection highlights
         if self.isSelected:
@@ -227,9 +232,7 @@ def main():
             elif e.type == KEYDOWN and e.key == K_LEFT:
                 if not gameEnded and g1.new.back():
                     g1.turn = not g1.turn
-                    g1.isSelected = False
-                    g1.selected = (-1, -1)
-                    g1.tempresult, g1.tempattack = [], []
+                    g1._clearSelection()
                     g1.mbhold = True  # consume any held click
             elif e.type == KEYDOWN and e.key == K_q:
                 g1.m = True
@@ -237,14 +240,11 @@ def main():
                 g1.gameOverText = None
                 g1.new = Board()
                 g1.turn = True
-                g1.isSelected = False
-                g1.tempresult, g1.tempattack = [], []
+                g1._clearSelection()
                 g1.mbhold = True  # consume any held click
             elif e.type == MOUSEBUTTONDOWN:
                 if e.button == 3:
-                    g1.isSelected = False
-                    g1.selected = (-1, -1)
-                    g1.tempresult, g1.tempattack = [], []
+                    g1._clearSelection()
 
         if g1.m:
             g1.menu()
