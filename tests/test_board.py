@@ -228,6 +228,26 @@ class TestCastling:
         moves, _ = b.legal('e8')
         assert 'g8' in moves
 
+    def test_castle_revoked_when_rook_captured(self):
+        # Capturing the h1 rook must revoke kingside rights - otherwise the
+        # king could later "castle" and move() would conjure a phantom rook on f1
+        b = setup_board({
+            'e1': 'K', 'h1': 'R', 'e8': 'k',
+            'h8': 'r',  # black rook takes h1 rook
+        })
+        b.state["whiteTurn"] = False
+        b.move('h8', 'h1', False)
+        assert b.state["whiteCastle"] == False
+        moves, _ = b.legal('e1')
+        assert 'g1' not in moves
+
+    def test_no_castle_without_rook(self):
+        # Rights still True but no rook on h1 - castling must not be offered
+        b = setup_board({'e1': 'K', 'e8': 'k'})
+        moves, _ = b.legal('e1')
+        assert 'g1' not in moves
+        assert 'c1' not in moves
+
 
 class TestCheck:
     def test_in_check(self):
@@ -305,8 +325,14 @@ class TestStalemate:
 class TestDraw:
     def test_50_move_rule(self):
         b = Board()
-        b.state["repeatedMoves"] = 50
+        # 50 full moves = 100 half-moves without capture or pawn move
+        b.state["repeatedMoves"] = 100
         assert b.isDraw(True)
+
+    def test_50_move_rule_not_at_half(self):
+        b = Board()
+        b.state["repeatedMoves"] = 50  # only 25 full moves - not a draw yet
+        assert not b.isDraw(True)
 
     def test_threefold_repetition(self):
         # Move knights back and forth - need 3 occurrences of the same position
@@ -321,6 +347,21 @@ class TestDraw:
         # gameDraw is set when history.count >= 3 for a position, which happens
         # when a board state appears for the 3rd time during a move() call
         assert b.gameDraw
+
+    def test_threefold_flag_cleared_by_undo(self):
+        b = play_moves([
+            'g1f3', 'g8f6',
+            'f3g1', 'f6g8',
+            'g1f3', 'g8f6',
+            'f3g1', 'f6g8',
+            'g1f3', 'g8f6',
+        ])
+        assert b.gameDraw
+        # Undo back past the third occurrence of the repeated position -
+        # the draw flag must clear so play can resume
+        b.back()
+        b.back()
+        assert not b.gameDraw
 
 
 class TestUndo:

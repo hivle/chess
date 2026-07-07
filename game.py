@@ -170,11 +170,11 @@ class Board:
             if self.board[0][i] == 'P': self.board[0][i] = 'Q'
             if self.board[7][i] == 'p': self.board[7][i] = 'q'
 
-        # Revoke castling rights when king or rook moves
-        if start in ('h1', 'e1'): self.state["whiteCastle"] = False
-        if start in ('a1', 'e1'): self.state["whiteCastleLong"] = False
-        if start in ('h8', 'e8'): self.state["blackCastle"] = False
-        if start in ('a8', 'e8'): self.state["blackCastleLong"] = False
+        # Revoke castling rights when king or rook moves, or a rook is captured
+        if start in ('h1', 'e1') or end == 'h1': self.state["whiteCastle"] = False
+        if start in ('a1', 'e1') or end == 'a1': self.state["whiteCastleLong"] = False
+        if start in ('h8', 'e8') or end == 'h8': self.state["blackCastle"] = False
+        if start in ('a8', 'e8') or end == 'a8': self.state["blackCastleLong"] = False
 
         return True
 
@@ -187,6 +187,8 @@ class Board:
             for j in range(8):
                 self.board[i][j] = last[i * 8 + j]
         self.state.update(lastState)
+        # Recompute threefold-repetition flag from the remaining history
+        self.gameDraw = any(self.history.count(s) >= 3 for s in set(self.history))
         return True
 
     def look(self, target: str, direction: tuple[int, int]) -> str:
@@ -219,7 +221,8 @@ class Board:
         return not self._hasLegalMove(whiteToMove)
 
     def isDraw(self, whiteToMove: bool) -> bool:
-        if self.state["repeatedMoves"] >= 50: return True
+        # Fifty-move rule: 50 full moves = 100 half-moves without capture or pawn move
+        if self.state["repeatedMoves"] >= 100: return True
         if self.gameDraw: return True
         if self.inCheck(whiteToMove):
             return False
@@ -277,23 +280,26 @@ class Board:
                 elif self.isEnemy(sq, target):
                     attacks.append(sq)
 
-        # Castling (only on this king's turn)
+        # Castling (only on this king's turn, and only with the rook still home)
         if self.state["whiteTurn"] == isWhite:
             danger = self.danger(isWhite)
+            rook = 'R' if isWhite else 'r'
             if target not in danger:
                 # Queenside
                 d1 = self.look(target, LEFT)
                 c1 = self.look(target, (-2, 0))
                 b1 = self.look(target, (-3, 0))
                 canLong = (isWhite and self.state["whiteCastleLong"]) or (not isWhite and self.state["blackCastleLong"])
-                if canLong and self.colour(d1) == EMPTY and self.colour(c1) == EMPTY and self.colour(b1) == EMPTY:
+                if canLong and self.name(self.look(target, (-4, 0))) == rook \
+                        and self.colour(d1) == EMPTY and self.colour(c1) == EMPTY and self.colour(b1) == EMPTY:
                     if d1 not in danger and c1 not in danger:
                         emptySquares.append(c1)
                 # Kingside
                 f1 = self.look(target, RIGHT)
                 g1 = self.look(target, (2, 0))
                 canShort = (isWhite and self.state["whiteCastle"]) or (not isWhite and self.state["blackCastle"])
-                if canShort and self.colour(f1) == EMPTY and self.colour(g1) == EMPTY:
+                if canShort and self.name(self.look(target, (3, 0))) == rook \
+                        and self.colour(f1) == EMPTY and self.colour(g1) == EMPTY:
                     if f1 not in danger and g1 not in danger:
                         emptySquares.append(g1)
 

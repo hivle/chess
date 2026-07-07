@@ -145,7 +145,9 @@ class play:
         for i, (label, depth) in enumerate(options):
             if self._menu_button(label, y0 + i * gap, mx, my, clicked):
                 if depth == -1:
-                    quit()
+                    # Let the main loop shut down cleanly (pygame.quit() alone
+                    # doesn't exit and crashes the next draw call)
+                    event.post(event.Event(QUIT))
                 else:
                     self.ai_depth = depth
                     self.m = False
@@ -245,10 +247,15 @@ def main():
             if e.type == QUIT:
                 run = False
             elif e.type == KEYDOWN and e.key == K_LEFT:
-                if not gameEnded and g1.new.back():
-                    # back() restores whiteTurn from history - no manual flip needed
+                if g1.new.back():
+                    # In AI mode, undo both AI's move and player's move
+                    if g1.ai_depth > 0:
+                        g1.new.back()
                     g1._clearSelection()
                     g1.mbhold = True  # consume any held click
+                    # Undoing after checkmate/draw resumes the game
+                    gameEnded = False
+                    g1.gameOverText = None
             elif e.type == KEYDOWN and e.key == K_q:
                 g1.m = True
                 gameEnded = False

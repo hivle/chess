@@ -58,11 +58,20 @@ def evaluate(board: Board) -> float:
 
 
 def _fast_evaluate(board: Board) -> float:
-    """Quick material + position score (no mate/draw checks)."""
+    """Quick material + center score (no mate/draw checks)."""
     score = 0
-    for row in board.board:
-        for piece in row:
-            score += PIECE_VALUES.get(piece, 0)
+    for r in range(8):
+        row = board.board[r]
+        for c in range(8):
+            piece = row[c]
+            if piece == '0' or piece == 'X':
+                continue
+            score += PIECE_VALUES[piece]
+            # Center bonus by index: rows/cols 3-4 = d4/e4/d5/e5, 2-5 = extended ring
+            if 3 <= r <= 4 and 3 <= c <= 4:
+                score += 10 if piece.isupper() else -10
+            elif 2 <= r <= 5 and 2 <= c <= 5:
+                score += 5 if piece.isupper() else -5
     return score
 
 
@@ -101,10 +110,14 @@ def minimax(board: Board, depth: int, alpha: float, beta: float, maximizing: boo
     if depth == 0:
         return _fast_evaluate(board), None
 
+    # Mate score grows with remaining depth so mates closer to the root
+    # (faster mates) outscore slower ones and the AI converts instead of shuffling
+    mate = 99999 + depth
+
     moves = get_all_moves(board, whiteToMove)
     if not moves:
         if board.inCheck(whiteToMove):
-            return (-99999 if whiteToMove else 99999), None
+            return (-mate if whiteToMove else mate), None
         return 0, None  # stalemate
 
     # Order moves for better alpha-beta pruning
@@ -132,7 +145,7 @@ def minimax(board: Board, depth: int, alpha: float, beta: float, maximizing: boo
                 break
         if not found_legal:
             if board.inCheck(whiteToMove):
-                return -99999, None
+                return -mate, None
             return 0, None
         return max_eval, best_move
     else:
@@ -153,7 +166,7 @@ def minimax(board: Board, depth: int, alpha: float, beta: float, maximizing: boo
                 break
         if not found_legal:
             if board.inCheck(whiteToMove):
-                return 99999, None
+                return mate, None
             return 0, None
         return min_eval, best_move
 
