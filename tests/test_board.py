@@ -655,3 +655,53 @@ class TestPerformance:
         per_iter = elapsed / iterations * 1000
         print(f"\n  play 6 moves + undo all x{iterations}: {elapsed:.3f}s ({per_iter:.1f}ms/cycle)")
         assert elapsed < 10.0, f"undo too slow: {elapsed:.1f}s"
+
+
+class TestMoveValidation:
+    """move() must reject anything that isn't a legal move (the CLI relies on this)."""
+
+    def test_rejects_impossible_piece_move(self):
+        b = Board()
+        assert not b.move('e2', 'e5')  # pawn can't jump 3
+        assert b.name('e2') == 'P' and b.name('e5') == '0'
+
+    def test_rejects_opponents_piece(self):
+        b = Board()
+        assert not b.move('e7', 'e5')  # white to move
+
+    def test_rejects_empty_square(self):
+        b = Board()
+        assert not b.move('e4', 'e5')
+
+    def test_rejects_off_board_input(self):
+        b = Board()
+        assert not b.move('z9', 'z9')
+        assert not b.move('e2', 'e9')
+        assert not b.move('e', 'e4')
+
+    def test_rejects_leaving_king_in_check(self):
+        b = setup_board({'e1': 'K', 'e2': 'B', 'e8': 'r', 'a8': 'k'})
+        assert not b.move('e2', 'd3')  # bishop is pinned to the king
+
+    def test_rejected_move_leaves_no_history(self):
+        b = Board()
+        b.move('e2', 'e5')
+        assert b.history == [] and b.state["whiteTurn"]
+
+    def test_no_castle_from_non_home_square(self):
+        # Rights flags still set, rook two squares right - but king isn't on e1
+        b = setup_board({'e4': 'K', 'h4': 'R', 'e8': 'k'})
+        moves, _ = b.legal('e4')
+        assert 'g4' not in moves
+
+
+class TestCopy:
+    def test_copy_is_independent(self):
+        b = Board()
+        c = b.copy()
+        c.move('e2', 'e4')
+        assert b.name('e2') == 'P' and b.state["whiteTurn"]
+
+    def test_copy_skips_history(self):
+        b = play_moves(['e2e4', 'e7e5'])
+        assert b.copy().history == []

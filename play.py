@@ -242,7 +242,9 @@ def main():
     g1 = play(side, flip=False, ai_depth=0)  # menu sets ai_depth
     run = True
     gameEnded = False
+    clock = time.Clock()
     while run:
+        clock.tick(60)  # cap at 60 FPS so the loop doesn't max out a CPU core
         for e in event.get():
             if e.type == QUIT:
                 run = False
@@ -276,6 +278,7 @@ def main():
                 # AI move: if it's the AI's turn (AI plays black when side=True)
                 ai_is_turn = g1.ai_depth > 0 and g1.whiteTurn != side
                 if ai_is_turn:
+                    display.flip()  # show the player's move before the AI starts thinking
                     move = best_move(g1.new, g1.ai_depth)
                     if move:
                         g1.new.move(move[0], move[1])

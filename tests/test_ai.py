@@ -121,12 +121,9 @@ class TestBestMove:
         assert move == ('a1', 'a8'), f"Should find back-rank mate Ra8#, got {move}"
 
     def test_returns_none_when_no_moves(self):
-        """If mated, should still return something (first move)."""
+        """A checkmated side has no legal move, so best_move returns None."""
         b = play_moves(['f2f3', 'e7e5', 'g2g4', 'd8h4'])
-        # White is mated, but best_move returns the first pseudo-legal move
-        move = best_move(b, depth=1)
-        # Just verify it doesn't crash
-        assert move is not None or move is None  # either is fine
+        assert best_move(b, depth=1) is None
 
     def test_black_captures_queen(self):
         """AI playing black should capture a hanging queen."""

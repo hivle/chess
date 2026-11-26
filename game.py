@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 # Colour constants
 EMPTY = 0
 WHITE = 1
@@ -104,14 +102,44 @@ class Board:
         x, y = self.listPos(target)
         self.board[x][y] = new
 
+    def copy(self) -> 'Board':
+        """Cheap copy for trying out moves. Skips undo history, which
+        look-ahead never needs and which grows every move."""
+        b = object.__new__(Board)
+        b._whitePieces = self._whitePieces
+        b._blackPieces = self._blackPieces
+        b.state = self.state.copy()
+        b.gameDraw = self.gameDraw
+        b.board = [row[:] for row in self.board]
+        b.history = []
+        b.pastStates = []
+        return b
+
+    @staticmethod
+    def onBoard(square: str) -> bool:
+        return len(square) == 2 and 'a' <= square[0] <= 'h' and '1' <= square[1] <= '8'
+
+    def isLegal(self, start: str, end: str) -> bool:
+        """True if start->end is a fully legal move for the side to move."""
+        if not (self.onBoard(start) and self.onBoard(end)):
+            return False
+        if self.colour(start) != (WHITE if self.state["whiteTurn"] else BLACK):
+            return False
+        empty, attacks = self.legal(start)
+        if end not in empty and end not in attacks:
+            return False
+        temp = self.copy()
+        temp.move(start, end, False)
+        return not temp.inCheck(self.state["whiteTurn"])
+
     def move(self, start: str, end: str, test: bool = True) -> bool:
-        """Execute a move. If test=True, reject moves that leave own king in check."""
+        """Execute a move. If test=True, reject anything that isn't a legal move
+        (wrong side, impossible for the piece, or leaves own king in check).
+        test=False skips validation - for the AI and internal look-ahead,
+        which only feed it moves from legal()."""
+        if test and not self.isLegal(start, end):
+            return False
         isWhite = self.colour(start) == WHITE
-        if test:
-            temp = deepcopy(self)
-            temp.move(start, end, False)
-            if temp.inCheck(isWhite):
-                return False
 
         # Save board state for undo
         boardSnapshot = ''.join(cell for row in self.board for cell in row)
@@ -236,7 +264,7 @@ class Board:
                 if self.colour(sq) == clr:
                     moves, attacks = self.legal(sq)
                     for target in moves + attacks:
-                        temp = deepcopy(self)
+                        temp = self.copy()
                         temp.move(sq, target, False)
                         if not temp.inCheck(whiteToMove):
                             return True
@@ -280,8 +308,8 @@ class Board:
                 elif self.isEnemy(sq, target):
                     attacks.append(sq)
 
-        # Castling (only on this king's turn, and only with the rook still home)
-        if self.state["whiteTurn"] == isWhite:
+        # Castling (only on this king's turn, from its home square, with the rook still home)
+        if self.state["whiteTurn"] == isWhite and target == ('e1' if isWhite else 'e8'):
             danger = self.danger(isWhite)
             rook = 'R' if isWhite else 'r'
             if target not in danger:
@@ -343,19 +371,11 @@ class Board:
         """Return only truly legal moves (excludes moves that leave king in check)."""
         isWhite = self.colour(target) == WHITE
         emptySquares, attacks = self.legal(target)
-        filteredEmpty = []
-        filteredAttack = []
-        for sq in emptySquares:
-            temp = deepcopy(self)
+        def safe(sq):
+            temp = self.copy()
             temp.move(target, sq, False)
-            if not temp.inCheck(isWhite):
-                filteredEmpty.append(sq)
-        for sq in attacks:
-            temp = deepcopy(self)
-            temp.move(target, sq, False)
-            if not temp.inCheck(isWhite):
-                filteredAttack.append(sq)
-        return filteredEmpty, filteredAttack
+            return not temp.inCheck(isWhite)
+        return [sq for sq in emptySquares if safe(sq)], [sq for sq in attacks if safe(sq)]
 
     def isAttacked(self, side: bool, target: str) -> bool:
         """Return True if target square is attacked by the opponent of 'side'."""

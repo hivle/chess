@@ -1,6 +1,5 @@
 """Simple chess AI using minimax with alpha-beta pruning."""
 
-from copy import deepcopy
 from game import Board, WHITE, BLACK
 
 # Piece values for evaluation
@@ -18,19 +17,6 @@ ABS_PIECE_VALUES = {
 # Bonus for pieces being in the center
 CENTER_SQUARES = {'d4', 'e4', 'd5', 'e5'}
 EXTENDED_CENTER = {'c3', 'd3', 'e3', 'f3', 'c4', 'f4', 'c5', 'f5', 'c6', 'd6', 'e6', 'f6'}
-
-
-def _copy_board(board: Board) -> Board:
-    """Fast board copy — avoids generic deepcopy overhead."""
-    b = object.__new__(Board)
-    b._whitePieces = board._whitePieces
-    b._blackPieces = board._blackPieces
-    b.state = board.state.copy()
-    b.gameDraw = board.gameDraw
-    b.board = [row[:] for row in board.board]
-    b.history = []  # AI doesn't need undo history
-    b.pastStates = []
-    return b
 
 
 def evaluate(board: Board) -> float:
@@ -130,7 +116,7 @@ def minimax(board: Board, depth: int, alpha: float, beta: float, maximizing: boo
     if maximizing:
         max_eval = float('-inf')
         for start, end in moves:
-            temp = _copy_board(board)
+            temp = board.copy()
             if not temp.move(start, end, False):
                 continue
             if temp.inCheck(whiteToMove):
@@ -151,7 +137,7 @@ def minimax(board: Board, depth: int, alpha: float, beta: float, maximizing: boo
     else:
         min_eval = float('inf')
         for start, end in moves:
-            temp = _copy_board(board)
+            temp = board.copy()
             if not temp.move(start, end, False):
                 continue
             if temp.inCheck(whiteToMove):
