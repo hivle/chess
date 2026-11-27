@@ -52,8 +52,44 @@ class Board:
             ['P','P','P','P','P','P','P','P'],
             ['R','N','B','Q','K','B','N','R']]
 
-        self.history = []
-        self.pastStates = []
+        self.recording = True  # False on look-ahead copies: skip undo/log bookkeeping
+        self.history = []      # board snapshots, for undo
+        self.pastStates = []   # state dicts, for undo
+        self.moveLog = []      # (start, end, notation) of every move played
+        self.redoStack = []    # (start, end) of undone moves, for redo
+        # Position keys for threefold repetition (board + turn + castling rights)
+        self.positions = [self.positionKey()]
+
+    def positionKey(self) -> str:
+        """Identify a position for repetition: two positions are the same only
+        if the pieces, side to move and castling rights all match. The
+        en passant ghost 'X' is ignored."""
+        s = self.state
+        cells = ''.join(cell for row in self.board for cell in row).replace('X', '0')
+        flags = ''.join('1' if s[k] else '0' for k in
+                        ("whiteTurn", "whiteCastle", "whiteCastleLong", "blackCastle", "blackCastleLong"))
+        return cells + flags
+
+    def notation(self, start: str, end: str) -> str:
+        """Readable move text, e.g. 'e2-e4', 'Ng1xf3', 'O-O', 'e7-e8=Q'."""
+        piece = self.name(start)
+        if piece in ('K', 'k') and abs(ord(end[0]) - ord(start[0])) == 2:
+            return 'O-O' if end[0] == 'g' else 'O-O-O'
+        isPawn = piece in ('P', 'p')
+        capture = self.colour(end) != EMPTY or (isPawn and self.name(end) == 'X')
+        text = ('' if isPawn else piece.upper()) + start + ('x' if capture else '-') + end
+        if isPawn and end[1] in ('1', '8'):
+            text += '=Q'
+        return text
+
+    def moveText(self) -> str:
+        """The game so far, e.g. '1. e2-e4 e7-e5 2. Ng1-f3'."""
+        parts = []
+        for i, (_, _, text) in enumerate(self.moveLog):
+            if i % 2 == 0:
+                parts.append(f"{i // 2 + 1}.")
+            parts.append(text)
+        return ' '.join(parts)
 
     def __str__(self) -> str:
         result = ""
@@ -111,8 +147,12 @@ class Board:
         b.state = self.state.copy()
         b.gameDraw = self.gameDraw
         b.board = [row[:] for row in self.board]
+        b.recording = False
         b.history = []
         b.pastStates = []
+        b.moveLog = []
+        b.redoStack = []
+        b.positions = []
         return b
 
     @staticmethod
@@ -141,12 +181,13 @@ class Board:
             return False
         isWhite = self.colour(start) == WHITE
 
-        # Save board state for undo
-        boardSnapshot = ''.join(cell for row in self.board for cell in row)
-        self.history.append(boardSnapshot)
-        self.pastStates.append(self.state.copy())
-        if self.history.count(boardSnapshot) >= 3:
-            self.gameDraw = True
+        # Save board state for undo, and log the move (real games only - the
+        # AI's throwaway copies never undo, and this would slow the search)
+        if self.recording:
+            self.history.append(''.join(cell for row in self.board for cell in row))
+            self.pastStates.append(self.state.copy())
+            self.moveLog.append((start, end, self.notation(start, end)))
+            self.redoStack.clear()  # a new move makes the undone moves unreachable
 
         self.state["repeatedMoves"] += 1
         if self.isEnemy(start, end):
@@ -204,9 +245,17 @@ class Board:
         if start in ('h8', 'e8') or end == 'h8': self.state["blackCastle"] = False
         if start in ('a8', 'e8') or end == 'a8': self.state["blackCastleLong"] = False
 
+        # Threefold repetition: the same position (incl. turn and castling) a 3rd time
+        if self.recording:
+            key = self.positionKey()
+            self.positions.append(key)
+            if self.positions.count(key) >= 3:
+                self.gameDraw = True
+
         return True
 
     def back(self) -> bool:
+        """Undo the last move. It can be replayed with forward()."""
         if not self.history:
             return False
         last = self.history.pop()
@@ -215,8 +264,23 @@ class Board:
             for j in range(8):
                 self.board[i][j] = last[i * 8 + j]
         self.state.update(lastState)
-        # Recompute threefold-repetition flag from the remaining history
-        self.gameDraw = any(self.history.count(s) >= 3 for s in set(self.history))
+        if self.moveLog:
+            start, end, _ = self.moveLog.pop()
+            self.redoStack.append((start, end))
+        if len(self.positions) > 1:
+            self.positions.pop()
+        # Undoing past a repetition clears the draw
+        self.gameDraw = any(self.positions.count(p) >= 3 for p in set(self.positions))
+        return True
+
+    def forward(self) -> bool:
+        """Redo the last undone move."""
+        if not self.redoStack:
+            return False
+        start, end = self.redoStack.pop()
+        remaining = self.redoStack[:]
+        self.move(start, end, False)  # it was legal when first played
+        self.redoStack = remaining    # move() clears redo; keep the rest
         return True
 
     def look(self, target: str, direction: tuple[int, int]) -> str:

@@ -8,7 +8,7 @@ from ai import best_move
 def main():
     print("=== Chess CLI ===")
     print("Enter moves as: e2e4")
-    print("Commands: undo, quit\n")
+    print("Commands: undo, redo, moves, quit\n")
 
     # Choose mode
     print("1) 2 Player")
@@ -42,7 +42,7 @@ def main():
             if move is None:
                 print("AI has no moves.")
                 break
-            print(f"  AI plays: {move[0]}{move[1]}")
+            print(f"  AI plays: {board.notation(move[0], move[1])}")
             board.move(move[0], move[1])
             continue
 
@@ -50,10 +50,22 @@ def main():
         cmd = input(f"  {turn} move: ").strip().lower()
         if cmd == "quit":
             break
+        ai_turn = lambda: ai_depth > 0 and not board.state["whiteTurn"]
         if cmd == "undo":
-            board.back()
-            if ai_depth > 0:
-                board.back()  # undo AI move too
+            # In AI mode, undo the AI's reply too so it's your turn again
+            if not board.back():
+                print("  Nothing to undo.")
+            elif ai_turn():
+                board.back()
+            continue
+        if cmd == "redo":
+            if not board.forward():
+                print("  Nothing to redo.")
+            elif ai_turn():
+                board.forward()  # replay the AI's reply too, if it was undone
+            continue
+        if cmd == "moves":
+            print("  " + (board.moveText() or "No moves yet."))
             continue
         if len(cmd) != 4:
             print("  Invalid. Use format like e2e4")

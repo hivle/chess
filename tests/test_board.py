@@ -348,20 +348,31 @@ class TestDraw:
         # when a board state appears for the 3rd time during a move() call
         assert b.gameDraw
 
-    def test_threefold_flag_cleared_by_undo(self):
-        b = play_moves([
-            'g1f3', 'g8f6',
-            'f3g1', 'f6g8',
-            'g1f3', 'g8f6',
-            'f3g1', 'f6g8',
-            'g1f3', 'g8f6',
-        ])
+    def test_threefold_detected_on_third_occurrence(self):
+        # Initial position occurs a 3rd time right after the 8th move
+        b = play_moves(['g1f3', 'g8f6', 'f3g1', 'f6g8'] * 2)
         assert b.gameDraw
-        # Undo back past the third occurrence of the repeated position -
-        # the draw flag must clear so play can resume
-        b.back()
-        b.back()
+
+    def test_threefold_flag_cleared_by_undo(self):
+        b = play_moves(['g1f3', 'g8f6', 'f3g1', 'f6g8'] * 2)
+        assert b.gameDraw
+        b.back()  # back to only 2 occurrences
         assert not b.gameDraw
+
+    def test_repetition_requires_same_castling_rights(self):
+        # Kings walk out and back: the board looks like it did after 1.e4 e5,
+        # but castling rights are gone, so it is NOT the same position
+        b = play_moves(['e2e4', 'e7e5'] + ['e1e2', 'e8e7', 'e2e1', 'e7e8'] * 2)
+        assert not b.gameDraw
+        for m in ['e1e2', 'e8e7', 'e2e1', 'e7e8']:  # third time without rights
+            b.move(m[:2], m[2:])
+        assert b.gameDraw
+
+    def test_repetition_requires_same_side_to_move(self):
+        b = Board()
+        k1 = b.positionKey()
+        b.state["whiteTurn"] = False
+        assert b.positionKey() != k1
 
 
 class TestUndo:
@@ -705,3 +716,49 @@ class TestCopy:
     def test_copy_skips_history(self):
         b = play_moves(['e2e4', 'e7e5'])
         assert b.copy().history == []
+
+
+class TestRedoAndMoveLog:
+    def test_redo_replays_undone_move(self):
+        b = play_moves(['e2e4', 'e7e5'])
+        b.back()
+        assert b.name('e5') == '0'
+        assert b.forward()
+        assert b.name('e5') == 'p' and b.state["whiteTurn"]
+
+    def test_redo_multiple_in_order(self):
+        b = play_moves(['e2e4', 'e7e5', 'g1f3'])
+        b.back(); b.back(); b.back()
+        assert b.forward() and b.forward() and b.forward()
+        assert b.name('f3') == 'N' and not b.forward()
+
+    def test_new_move_clears_redo(self):
+        b = play_moves(['e2e4', 'e7e5'])
+        b.back()
+        b.move('d7', 'd5')
+        assert not b.forward()
+
+    def test_redo_nothing(self):
+        assert not Board().forward()
+
+    def test_redo_restores_draw_flag(self):
+        b = play_moves(['g1f3', 'g8f6', 'f3g1', 'f6g8'] * 2)
+        b.back()
+        assert not b.gameDraw
+        b.forward()
+        assert b.gameDraw
+
+    def test_move_text(self):
+        b = play_moves(['e2e4', 'e7e5', 'g1f3'])
+        assert b.moveText() == '1. e2-e4 e7-e5 2. Ng1-f3'
+        b.back()
+        assert b.moveText() == '1. e2-e4 e7-e5'
+
+    def test_notation_capture_castle_promotion(self):
+        b = play_moves(['e2e4', 'd7d5', 'e4d5'])
+        assert b.moveLog[-1][2] == 'e4xd5'
+        c = Board()
+        c.setValue('f1', '0'); c.setValue('g1', '0')
+        assert c.notation('e1', 'g1') == 'O-O'
+        d = setup_board({'e1': 'K', 'e8': 'k', 'a7': 'P'})
+        assert d.notation('a7', 'a8') == 'a7-a8=Q'

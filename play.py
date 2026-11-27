@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import threading
 from game import Board
 from ai import best_move
 from pygame import *
@@ -74,6 +75,74 @@ class play:
         self.tempresult = []
         self.tempattack = []
         self.mbhold = False
+
+        # Background AI: each search is tagged with a token; undo/redo/new game
+        # bump the token so a search started on an old position is ignored
+        self.aiToken = 0
+        self.aiStartedToken = None
+        self.aiResults = {}
+        self.caption = None
+
+    def aiThinking(self) -> bool:
+        return self.aiStartedToken == self.aiToken and self.aiToken not in self.aiResults
+
+    def _aiWorker(self, board, token):
+        self.aiResults[token] = best_move(board, self.ai_depth)
+
+    def updateAI(self, side: bool):
+        """Start the AI on its turn, and play its move once the search is done.
+        The search runs in a thread so the window keeps responding."""
+        if self.ai_depth == 0 or self.whiteTurn == side:
+            return
+        if self.aiToken in self.aiResults:
+            move = self.aiResults.pop(self.aiToken)
+            self.aiResults.clear()  # drop stale results from cancelled searches
+            if move:
+                self.new.move(move[0], move[1])
+            self.aiToken += 1
+        elif self.aiStartedToken != self.aiToken:
+            self.aiStartedToken = self.aiToken
+            # Search a copy, so the real board can be drawn/undone meanwhile
+            threading.Thread(target=self._aiWorker, args=(self.new.copy(), self.aiToken),
+                             daemon=True).start()
+
+    def cancelAI(self):
+        self.aiToken += 1
+
+    def _isAITurn(self, side: bool) -> bool:
+        return self.ai_depth > 0 and self.whiteTurn != side
+
+    def undo(self, side: bool) -> bool:
+        """Undo one move, or in AI mode back to the player's turn."""
+        if not self.new.back():
+            return False
+        if self._isAITurn(side):
+            self.new.back()
+        self.cancelAI()
+        return True
+
+    def redo(self, side: bool) -> bool:
+        """Redo one move, or in AI mode the player's move plus the AI's reply."""
+        if not self.new.forward():
+            return False
+        if self._isAITurn(side):
+            self.new.forward()
+        self.cancelAI()
+        return True
+
+    def updateCaption(self):
+        """Show the latest moves (and AI status) in the window title."""
+        if self.m:
+            text = "Chess"
+        else:
+            moves = self.new.moveText().split(' ')
+            recent = ' '.join(moves[-9:])  # last few moves fit in the title bar
+            text = f"Chess  |  {recent}" if recent else "Chess"
+            if self.aiThinking():
+                text += "   (AI thinking...)"
+        if text != self.caption:
+            display.set_caption(text)
+            self.caption = text
 
     @property
     def whiteTurn(self):
@@ -242,17 +311,16 @@ def main():
     g1 = play(side, flip=False, ai_depth=0)  # menu sets ai_depth
     run = True
     gameEnded = False
+    checkedAt = None  # (board, move count) at the last game-over check
     clock = time.Clock()
     while run:
         clock.tick(60)  # cap at 60 FPS so the loop doesn't max out a CPU core
         for e in event.get():
             if e.type == QUIT:
                 run = False
-            elif e.type == KEYDOWN and e.key == K_LEFT:
-                if g1.new.back():
-                    # In AI mode, undo both AI's move and player's move
-                    if g1.ai_depth > 0:
-                        g1.new.back()
+            elif e.type == KEYDOWN and e.key in (K_LEFT, K_RIGHT) and not g1.m:
+                changed = g1.undo(side) if e.key == K_LEFT else g1.redo(side)
+                if changed:
                     g1._clearSelection()
                     g1.mbhold = True  # consume any held click
                     # Undoing after checkmate/draw resumes the game
@@ -263,6 +331,7 @@ def main():
                 gameEnded = False
                 g1.gameOverText = None
                 g1.new = Board()  # new Board() resets whiteTurn to True
+                g1.cancelAI()
                 g1._clearSelection()
                 g1.mbhold = True  # consume any held click
             elif e.type == MOUSEBUTTONDOWN:
@@ -276,18 +345,15 @@ def main():
             g1.markCheck(side)
             if not gameEnded:
                 # AI move: if it's the AI's turn (AI plays black when side=True)
-                ai_is_turn = g1.ai_depth > 0 and g1.whiteTurn != side
-                if ai_is_turn:
-                    display.flip()  # show the player's move before the AI starts thinking
-                    move = best_move(g1.new, g1.ai_depth)
-                    if move:
-                        g1.new.move(move[0], move[1])
-                        g1._clearSelection()
+                if g1._isAITurn(side):
+                    g1.updateAI(side)  # non-blocking: thinks in a background thread
                 else:
                     g1.select(side)
 
-            # Check game-over conditions based on whose turn it is
-            if not gameEnded:
+            # Check game-over conditions - only when the position changed, since
+            # mate detection is expensive and would steal CPU from the AI thread
+            if not gameEnded and (id(g1.new), len(g1.new.moveLog)) != checkedAt:
+                checkedAt = (id(g1.new), len(g1.new.moveLog))
                 if g1.new.isDraw(g1.whiteTurn):
                     g1.gameOver(False, isDraw=True)
                     gameEnded = True
@@ -298,6 +364,7 @@ def main():
             if gameEnded:
                 g1.drawGameOver()
 
+        g1.updateCaption()
         display.flip()
     quit()
 

@@ -22,8 +22,11 @@ python play_cli.py
 ## Controls
 - **Left click** — select piece / move
 - **Right click** — deselect
-- **← arrow** — undo move
+- **← arrow** — undo move (in AI mode, undoes your move and the AI's reply)
+- **→ arrow** — redo move
 - **Q** — return to menu
+
+The window title shows the latest moves. In the terminal version, type `undo`, `redo`, `moves` (show the game so far) or `quit`.
 
 ## Run Tests
 ```
